@@ -562,12 +562,195 @@
         </div>
     </div>
 </div>
+<!-- ==================== -->
+<!-- ELECTROMOTIVE FORCE (EMF) -->
+<!-- ==================== -->
+<div id="emf-section" class="subtopic-content">
+    <div class="lesson-container">
+        <div class="lesson-header">
+            <div class="lesson-number">3</div>
+            <h3 class="lesson-title">Electromotive Force (E.M.F.)</h3>
+        </div>
 
-        </section>
+        <!-- Definition Box -->
+        <div class="concept-box definition">
+            <h4>📖 Definition of E.M.F.</h4>
+            <p><strong>Electromotive force (e.m.f.)</strong> of a source is the <em>work done by the source in driving a unit charge around a complete circuit</em>.</p>
+            <p style="margin-top: 10px;">It can also be defined as the <em>energy converted from other forms to electrical energy per unit charge</em>.</p>
+        </div>
 
-        <!-- DC CIRCUITS SECTION -->
-        <section id="circuits" class="content-section">
-            <!-- ==================== -->
+        <!-- Formula Box -->
+        <div class="concept-box formula">
+            <h4>📐 Formula</h4>
+            <div class="formula-display">ε = W / Q</div>
+            <div class="formula-breakdown">
+                <p><strong>ε</strong> (epsilon) = E.M.F. (in Volts, V)</p>
+                <p><strong>W</strong> = Work Done / Energy Converted (in Joules, J)</p>
+                <p><strong>Q</strong> = Charge (in Coulombs, C)</p>
+            </div>
+        </div>
+
+        <!-- EMF vs P.D. Comparison -->
+        <div class="concept-box tip">
+            <h4>⚡ E.M.F. vs Potential Difference</h4>
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>E.M.F. (ε)</th>
+                            <th>Potential Difference (V)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Associated with the <strong>source</strong> (battery, generator)</td>
+                            <td>Associated with <strong>components</strong> (resistors, bulbs)</td>
+                        </tr>
+                        <tr>
+                            <td>Energy <strong>supplied</strong> per unit charge</td>
+                            <td>Energy <strong>used/dissipated</strong> per unit charge</td>
+                        </tr>
+                        <tr>
+                            <td>Converts other forms of energy <strong>to</strong> electrical</td>
+                            <td>Converts electrical energy <strong>to</strong> other forms</td>
+                        </tr>
+                        <tr>
+                            <td>Measured when <strong>no current</strong> flows (open circuit)</td>
+                            <td>Measured when <strong>current flows</strong> through circuit</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Interactive EMF Demo -->
+        <div class="demo-area">
+            <span class="demo-title">🎮 Interactive: EMF and Energy Transfer</span>
+            
+            <div class="canvas-container">
+                <canvas id="emfDemoCanvas" width="700" height="350"></canvas>
+            </div>
+            
+            <div class="control-panel">
+                <div class="control-group">
+                    <label class="control-label">
+                        <span>Battery EMF</span>
+                        <span class="control-value"><span id="emfValue">12</span> V</span>
+                    </label>
+                    <input type="range" id="emfSlider" min="3" max="24" value="12" step="1">
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">
+                        <span>Number of Cells</span>
+                        <span class="control-value"><span id="cellCount">4</span></span>
+                    </label>
+                    <input type="range" id="cellSlider" min="1" max="8" value="4" step="1">
+                </div>
+                
+                <button class="btn btn-primary" id="toggleEMFDemo">
+                    <span>▶️</span> Start Energy Flow
+                </button>
+            </div>
+            
+            <div class="data-display">
+                <div class="data-item">
+                    <div class="data-label">Total EMF</div>
+                    <div class="data-value" id="totalEmfDisplay">12</div>
+                    <div class="data-unit">V</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">EMF per Cell</div>
+                    <div class="data-value" id="emfPerCellDisplay">3</div>
+                    <div class="data-unit">V</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">Energy Source</div>
+                    <div class="data-value" id="energySourceDisplay">Chemical</div>
+                    <div class="data-unit"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sources of EMF -->
+        <div class="concept-box">
+            <h4>🔋 Sources of E.M.F.</h4>
+            <div class="source-grid">
+                <div class="source-item">
+                    <div class="source-icon">🔋</div>
+                    <h5>Chemical Cell/Battery</h5>
+                    <p>Converts chemical energy → electrical energy</p>
+                </div>
+                <div class="source-item">
+                    <div class="source-icon">⚡</div>
+                    <h5>Generator</h5>
+                    <p>Converts mechanical energy → electrical energy</p>
+                </div>
+                <div class="source-item">
+                    <div class="source-icon">☀️</div>
+                    <h5>Solar Cell</h5>
+                    <p>Converts light energy → electrical energy</p>
+                </div>
+                <div class="source-item">
+                    <div class="source-icon">🌡️</div>
+                    <h5>Thermocouple</h5>
+                    <p>Converts thermal energy → electrical energy</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cells in Series -->
+        <div class="concept-box formula">
+            <h4>🔗 Cells in Series</h4>
+            <p>When cells are connected in series (positive to negative), the total EMF is the <strong>sum</strong> of individual EMFs:</p>
+            <div class="formula-display">ε<sub>total</sub> = ε₁ + ε₂ + ε₃ + ...</div>
+            
+            <div class="circuit-container" style="margin-top: 20px;">
+                <svg class="circuit-svg" viewBox="0 0 500 100" id="cellsSeriesCircuit">
+                    <!-- Will be drawn by JavaScript -->
+                </svg>
+            </div>
+        </div>
+
+        <!-- Worked Example -->
+        <div class="worked-example">
+            <h4>✏️ Worked Example 4</h4>
+            <div class="example-question">
+                <p><strong>Question:</strong> A battery converts 540 J of chemical energy to electrical energy when 45 C of charge passes through it. Calculate the e.m.f. of the battery.</p>
+            </div>
+            <div class="example-solution" id="example4Solution">
+                <button class="btn btn-secondary reveal-btn" onclick="revealSolution('example4')">
+                    <span>👁️</span> Reveal Solution
+                </button>
+                <div class="solution-content hidden">
+                    <p><strong>Given:</strong></p>
+                    <ul>
+                        <li>W = 540 J (energy converted)</li>
+                        <li>Q = 45 C</li>
+                    </ul>
+                    <p><strong>Using formula:</strong> ε = W / Q</p>
+                    <p><strong>Calculation:</strong></p>
+                    <p class="calculation">ε = 540 / 45 = <strong>12 V</strong></p>
+                    <p><strong>Answer:</strong> The e.m.f. of the battery is <strong>12 V</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Points Summary -->
+        <div class="key-points">
+            <h4>📌 Key Points to Remember</h4>
+            <ul>
+                <li>E.M.F. is the work done per unit charge by the source</li>
+                <li>E.M.F. is measured in Volts (V), same as P.D.</li>
+                <li>E.M.F. is NOT a force - it's energy per unit charge</li>
+                <li>Sources convert other forms of energy to electrical energy</li>
+                <li>For cells in series: Total EMF = sum of individual EMFs</li>
+                <li>E.M.F. is measured across the terminals when no current flows</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<!-- ==================== -->
 <!-- RESISTANCE SECTION -->
 <!-- ==================== -->
 <div id="resistance-section" class="subtopic-content">
@@ -1581,11 +1764,10 @@
         </div>
     </div>
 </div>
-
         </section>
 
-        <!-- PRACTICAL ELECTRICITY SECTION -->
-        <section id="practical" class="content-section">
+        <!-- DC CIRCUITS SECTION -->
+        <section id="circuits" class="content-section">
             <!-- ==================== -->
 <!-- DC CIRCUITS SECTION -->
 <!-- INSERT THIS INSIDE <section id="circuits" class="content-section"> -->
@@ -2712,11 +2894,10 @@
         </div>
     </div>
 </div>
-
         </section>
 
-        <!-- CIRCUIT SIMULATOR SECTION -->
-        <section id="simulator" class="content-section">
+        <!-- PRACTICAL ELECTRICITY SECTION -->
+        <section id="practical" class="content-section">
             <!-- ==================== -->
 <!-- PRACTICAL ELECTRICITY SECTION -->
 <!-- INSERT THIS INSIDE <section id="practical" class="content-section"> -->
@@ -4438,283 +4619,9 @@
 </div>
         </section>
 
-        <!-- QUIZ SECTION -->
-        <section id="quiz" class="content-section">
+        <!-- CIRCUIT SIMULATOR SECTION -->
+        <section id="simulator" class="content-section">
             <!-- ==================== -->
-<!-- QUIZ SECTION -->
-<!-- INSERT THIS INSIDE <section id="quiz" class="content-section"> -->
-<!-- ==================== -->
-
-<div class="section-header">
-    <h2>📝 Test Your Knowledge</h2>
-    <p class="section-subtitle">Challenge yourself with quizzes on all topics!</p>
-</div>
-
-<!-- Quiz Mode Selection -->
-<div class="quiz-mode-selection">
-    <h3>Choose Your Quiz Mode</h3>
-    
-    <div class="quiz-mode-cards">
-        <div class="quiz-mode-card" data-mode="topic">
-            <div class="mode-icon">📚</div>
-            <h4>Topic Quiz</h4>
-            <p>Focus on a specific topic</p>
-            <select id="topicSelect" class="topic-selector">
-                <option value="current">Current Electricity</option>
-                <option value="resistance">Resistance & Ohm's Law</option>
-                <option value="nonohmic">Non-Ohmic Conductors</option>
-                <option value="circuits">DC Circuits</option>
-                <option value="divider">Potential Divider</option>
-                <option value="power">Power & Energy</option>
-                <option value="safety">Electrical Safety</option>
-            </select>
-            <button class="btn btn-primary" onclick="startTopicQuiz()">
-                <span>▶️</span> Start Topic Quiz
-            </button>
-        </div>
-        
-        <div class="quiz-mode-card featured" data-mode="mixed">
-            <div class="mode-badge">⭐ Recommended</div>
-            <div class="mode-icon">🎯</div>
-            <h4>Mixed Quiz</h4>
-            <p>Questions from all topics</p>
-            <div class="difficulty-selector">
-                <label>Difficulty:</label>
-                <div class="difficulty-buttons">
-                    <button class="diff-btn active" data-difficulty="easy">Easy</button>
-                    <button class="diff-btn" data-difficulty="medium">Medium</button>
-                    <button class="diff-btn" data-difficulty="hard">Hard</button>
-                </div>
-            </div>
-            <button class="btn btn-primary" onclick="startMixedQuiz()">
-                <span>▶️</span> Start Mixed Quiz
-            </button>
-        </div>
-        
-        <div class="quiz-mode-card" data-mode="timed">
-            <div class="mode-icon">⏱️</div>
-            <h4>Timed Challenge</h4>
-            <p>Race against the clock!</p>
-            <div class="time-selector">
-                <label>Time Limit:</label>
-                <select id="timeLimit">
-                    <option value="60">1 minute</option>
-                    <option value="120" selected>2 minutes</option>
-                    <option value="180">3 minutes</option>
-                    <option value="300">5 minutes</option>
-                </select>
-            </div>
-            <button class="btn btn-primary" onclick="startTimedQuiz()">
-                <span>▶️</span> Start Timed Quiz
-            </button>
-        </div>
-        
-        <div class="quiz-mode-card" data-mode="circuit">
-            <div class="mode-icon">🔌</div>
-            <h4>Circuit Analysis</h4>
-            <p>Solve circuit problems</p>
-            <p class="mode-description">Calculate current, voltage, resistance</p>
-            <button class="btn btn-primary" onclick="startCircuitQuiz()">
-                <span>▶️</span> Start Circuit Quiz
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Quiz Container (Hidden initially) -->
-<div class="quiz-container hidden" id="quizContainer">
-    
-    <!-- Quiz Header -->
-    <div class="quiz-header">
-        <div class="quiz-info">
-            <span class="quiz-title" id="quizTitle">Topic Quiz</span>
-            <span class="quiz-topic" id="quizTopic">Current Electricity</span>
-        </div>
-        
-        <div class="quiz-progress-info">
-            <span class="question-counter">
-                Question <span id="currentQuestion">1</span> of <span id="totalQuestions">10</span>
-            </span>
-            <div class="quiz-progress-bar">
-                <div class="quiz-progress-fill" id="quizProgressFill"></div>
-            </div>
-        </div>
-        
-        <div class="quiz-timer hidden" id="quizTimer">
-            <span class="timer-icon">⏱️</span>
-            <span class="timer-value" id="timerValue">2:00</span>
-        </div>
-        
-        <button class="btn btn-secondary quiz-exit-btn" onclick="exitQuiz()">
-            <span>✖️</span> Exit
-        </button>
-    </div>
-    
-    <!-- Question Area -->
-    <div class="question-area" id="questionArea">
-        <!-- Questions will be loaded here dynamically -->
-    </div>
-    
-    <!-- Quiz Navigation -->
-    <div class="quiz-navigation">
-        <button class="btn btn-secondary" id="prevQuestionBtn" onclick="previousQuestion()" disabled>
-            <span>⬅️</span> Previous
-        </button>
-        
-        <div class="quiz-dots" id="quizDots">
-            <!-- Navigation dots will be generated -->
-        </div>
-        
-        <button class="btn btn-primary" id="nextQuestionBtn" onclick="nextQuestion()">
-            Next <span>➡️</span>
-        </button>
-        
-        <button class="btn btn-success hidden" id="submitQuizBtn" onclick="submitQuiz()">
-            <span>✅</span> Submit Quiz
-        </button>
-    </div>
-</div>
-
-<!-- Quiz Results (Hidden initially) -->
-<div class="quiz-results hidden" id="quizResults">
-    <div class="results-header">
-        <div class="results-icon" id="resultsIcon">🎉</div>
-        <h3 id="resultsTitle">Quiz Complete!</h3>
-    </div>
-    
-    <div class="results-score">
-        <div class="score-circle">
-            <svg viewBox="0 0 100 100" class="score-ring">
-                <circle cx="50" cy="50" r="45" class="score-ring-bg"/>
-                <circle cx="50" cy="50" r="45" class="score-ring-fill" id="scoreRingFill"/>
-            </svg>
-            <div class="score-text">
-                <span class="score-value" id="scoreValue">0</span>
-                <span class="score-percent">%</span>
-            </div>
-        </div>
-        <div class="score-details">
-            <p><span id="correctCount">0</span> out of <span id="totalCount">10</span> correct</p>
-            <p class="score-grade" id="scoreGrade">Keep practicing!</p>
-        </div>
-    </div>
-    
-    <div class="results-breakdown">
-        <h4>📊 Performance Breakdown</h4>
-        <div class="breakdown-bars" id="breakdownBars">
-            <!-- Topic breakdown will be generated -->
-        </div>
-    </div>
-    
-    <div class="results-review">
-        <h4>📝 Review Your Answers</h4>
-        <div class="review-list" id="reviewList">
-            <!-- Answer review will be generated -->
-        </div>
-    </div>
-    
-    <div class="results-actions">
-        <button class="btn btn-primary" onclick="retryQuiz()">
-            <span>🔄</span> Try Again
-        </button>
-        <button class="btn btn-secondary" onclick="newQuiz()">
-            <span>📝</span> New Quiz
-        </button>
-        <button class="btn btn-secondary" onclick="shareResults()">
-            <span>📤</span> Share Results
-        </button>
-    </div>
-</div>
-
-<!-- Leaderboard / Stats -->
-<div class="quiz-stats">
-    <h3>📈 Your Quiz Statistics</h3>
-    
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon">🎯</div>
-            <div class="stat-value" id="totalQuizzesTaken">0</div>
-            <div class="stat-label">Quizzes Taken</div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-value" id="averageScore">0%</div>
-            <div class="stat-label">Average Score</div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon">🏆</div>
-            <div class="stat-value" id="bestScore">0%</div>
-            <div class="stat-label">Best Score</div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon">🔥</div>
-            <div class="stat-value" id="currentStreak">0</div>
-            <div class="stat-label">Current Streak</div>
-        </div>
-    </div>
-    
-    <div class="topic-mastery">
-        <h4>Topic Mastery</h4>
-        <div class="mastery-bars" id="masteryBars">
-            <div class="mastery-item">
-                <span class="mastery-label">Current Electricity</span>
-                <div class="mastery-bar">
-                    <div class="mastery-fill" style="width: 0%;" data-topic="current"></div>
-                </div>
-                <span class="mastery-percent">0%</span>
-            </div>
-            <div class="mastery-item">
-                <span class="mastery-label">Resistance & Ohm's Law</span>
-                <div class="mastery-bar">
-                    <div class="mastery-fill" style="width: 0%;" data-topic="resistance"></div>
-                </div>
-                <span class="mastery-percent">0%</span>
-            </div>
-            <div class="mastery-item">
-                <span class="mastery-label">Non-Ohmic Conductors</span>
-                <div class="mastery-bar">
-                    <div class="mastery-fill" style="width: 0%;" data-topic="nonohmic"></div>
-                </div>
-                <span class="mastery-percent">0%</span>
-            </div>
-            <div class="mastery-item">
-                <span class="mastery-label">DC Circuits</span>
-                <div class="mastery-bar">
-                    <div class="mastery-fill" style="width: 0%;" data-topic="circuits"></div>
-                </div>
-                <span class="mastery-percent">0%</span>
-            </div>
-            <div class="mastery-item">
-                <span class="mastery-label">Potential Divider</span>
-                <div class="mastery-bar">
-                    <div class="mastery-fill" style="width: 0%;" data-topic="divider"></div>
-                </div>
-                <span class="mastery-percent">0%</span>
-            </div>
-            <div class="mastery-item">
-                <span class="mastery-label">Power & Energy</span>
-                <div class="mastery-bar">
-                    <div class="mastery-fill" style="width: 0%;" data-topic="power"></div>
-                </div>
-                <span class="mastery-percent">0%</span>
-            </div>
-            <div class="mastery-item">
-                <span class="mastery-label">Electrical Safety</span>
-                <div class="mastery-bar">
-                    <div class="mastery-fill" style="width: 0%;" data-topic="safety"></div>
-                </div>
-                <span class="mastery-percent">0%</span>
-            </div>
-        </div>
-    </div>
-    
-    <button class="btn btn-secondary" onclick="resetStats()">
-        <span>🗑️</span> Reset Statistics
-    </button>
-</div>
 <!-- CIRCUIT SIMULATOR SECTION -->
 <!-- INSERT THIS INSIDE <section id="simulator" class="content-section"> -->
 <!-- ==================== -->
@@ -5285,7 +5192,285 @@
         </div>
     </div>
 </div>
+        </section>
 
+        <!-- QUIZ SECTION -->
+        <section id="quiz" class="content-section">
+            <!-- ==================== -->
+<!-- QUIZ SECTION -->
+<!-- INSERT THIS INSIDE <section id="quiz" class="content-section"> -->
+<!-- ==================== -->
+
+<div class="section-header">
+    <h2>📝 Test Your Knowledge</h2>
+    <p class="section-subtitle">Challenge yourself with quizzes on all topics!</p>
+</div>
+
+<!-- Quiz Mode Selection -->
+<div class="quiz-mode-selection">
+    <h3>Choose Your Quiz Mode</h3>
+    
+    <div class="quiz-mode-cards">
+        <div class="quiz-mode-card" data-mode="topic">
+            <div class="mode-icon">📚</div>
+            <h4>Topic Quiz</h4>
+            <p>Focus on a specific topic</p>
+            <select id="topicSelect" class="topic-selector">
+                <option value="current">Current Electricity</option>
+                <option value="resistance">Resistance & Ohm's Law</option>
+                <option value="nonohmic">Non-Ohmic Conductors</option>
+                <option value="circuits">DC Circuits</option>
+                <option value="divider">Potential Divider</option>
+                <option value="power">Power & Energy</option>
+                <option value="safety">Electrical Safety</option>
+            </select>
+            <button class="btn btn-primary" onclick="startTopicQuiz()">
+                <span>▶️</span> Start Topic Quiz
+            </button>
+        </div>
+        
+        <div class="quiz-mode-card featured" data-mode="mixed">
+            <div class="mode-badge">⭐ Recommended</div>
+            <div class="mode-icon">🎯</div>
+            <h4>Mixed Quiz</h4>
+            <p>Questions from all topics</p>
+            <div class="difficulty-selector">
+                <label>Difficulty:</label>
+                <div class="difficulty-buttons">
+                    <button class="diff-btn active" data-difficulty="easy">Easy</button>
+                    <button class="diff-btn" data-difficulty="medium">Medium</button>
+                    <button class="diff-btn" data-difficulty="hard">Hard</button>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="startMixedQuiz()">
+                <span>▶️</span> Start Mixed Quiz
+            </button>
+        </div>
+        
+        <div class="quiz-mode-card" data-mode="timed">
+            <div class="mode-icon">⏱️</div>
+            <h4>Timed Challenge</h4>
+            <p>Race against the clock!</p>
+            <div class="time-selector">
+                <label>Time Limit:</label>
+                <select id="timeLimit">
+                    <option value="60">1 minute</option>
+                    <option value="120" selected>2 minutes</option>
+                    <option value="180">3 minutes</option>
+                    <option value="300">5 minutes</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="startTimedQuiz()">
+                <span>▶️</span> Start Timed Quiz
+            </button>
+        </div>
+        
+        <div class="quiz-mode-card" data-mode="circuit">
+            <div class="mode-icon">🔌</div>
+            <h4>Circuit Analysis</h4>
+            <p>Solve circuit problems</p>
+            <p class="mode-description">Calculate current, voltage, resistance</p>
+            <button class="btn btn-primary" onclick="startCircuitQuiz()">
+                <span>▶️</span> Start Circuit Quiz
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Container (Hidden initially) -->
+<div class="quiz-container hidden" id="quizContainer">
+    
+    <!-- Quiz Header -->
+    <div class="quiz-header">
+        <div class="quiz-info">
+            <span class="quiz-title" id="quizTitle">Topic Quiz</span>
+            <span class="quiz-topic" id="quizTopic">Current Electricity</span>
+        </div>
+        
+        <div class="quiz-progress-info">
+            <span class="question-counter">
+                Question <span id="currentQuestion">1</span> of <span id="totalQuestions">10</span>
+            </span>
+            <div class="quiz-progress-bar">
+                <div class="quiz-progress-fill" id="quizProgressFill"></div>
+            </div>
+        </div>
+        
+        <div class="quiz-timer hidden" id="quizTimer">
+            <span class="timer-icon">⏱️</span>
+            <span class="timer-value" id="timerValue">2:00</span>
+        </div>
+        
+        <button class="btn btn-secondary quiz-exit-btn" onclick="exitQuiz()">
+            <span>✖️</span> Exit
+        </button>
+    </div>
+    
+    <!-- Question Area -->
+    <div class="question-area" id="questionArea">
+        <!-- Questions will be loaded here dynamically -->
+    </div>
+    
+    <!-- Quiz Navigation -->
+    <div class="quiz-navigation">
+        <button class="btn btn-secondary" id="prevQuestionBtn" onclick="previousQuestion()" disabled>
+            <span>⬅️</span> Previous
+        </button>
+        
+        <div class="quiz-dots" id="quizDots">
+            <!-- Navigation dots will be generated -->
+        </div>
+        
+        <button class="btn btn-primary" id="nextQuestionBtn" onclick="nextQuestion()">
+            Next <span>➡️</span>
+        </button>
+        
+        <button class="btn btn-success hidden" id="submitQuizBtn" onclick="submitQuiz()">
+            <span>✅</span> Submit Quiz
+        </button>
+    </div>
+</div>
+
+<!-- Quiz Results (Hidden initially) -->
+<div class="quiz-results hidden" id="quizResults">
+    <div class="results-header">
+        <div class="results-icon" id="resultsIcon">🎉</div>
+        <h3 id="resultsTitle">Quiz Complete!</h3>
+    </div>
+    
+    <div class="results-score">
+        <div class="score-circle">
+            <svg viewBox="0 0 100 100" class="score-ring">
+                <circle cx="50" cy="50" r="45" class="score-ring-bg"/>
+                <circle cx="50" cy="50" r="45" class="score-ring-fill" id="scoreRingFill"/>
+            </svg>
+            <div class="score-text">
+                <span class="score-value" id="scoreValue">0</span>
+                <span class="score-percent">%</span>
+            </div>
+        </div>
+        <div class="score-details">
+            <p><span id="correctCount">0</span> out of <span id="totalCount">10</span> correct</p>
+            <p class="score-grade" id="scoreGrade">Keep practicing!</p>
+        </div>
+    </div>
+    
+    <div class="results-breakdown">
+        <h4>📊 Performance Breakdown</h4>
+        <div class="breakdown-bars" id="breakdownBars">
+            <!-- Topic breakdown will be generated -->
+        </div>
+    </div>
+    
+    <div class="results-review">
+        <h4>📝 Review Your Answers</h4>
+        <div class="review-list" id="reviewList">
+            <!-- Answer review will be generated -->
+        </div>
+    </div>
+    
+    <div class="results-actions">
+        <button class="btn btn-primary" onclick="retryQuiz()">
+            <span>🔄</span> Try Again
+        </button>
+        <button class="btn btn-secondary" onclick="newQuiz()">
+            <span>📝</span> New Quiz
+        </button>
+        <button class="btn btn-secondary" onclick="shareResults()">
+            <span>📤</span> Share Results
+        </button>
+    </div>
+</div>
+
+<!-- Leaderboard / Stats -->
+<div class="quiz-stats">
+    <h3>📈 Your Quiz Statistics</h3>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-value" id="totalQuizzesTaken">0</div>
+            <div class="stat-label">Quizzes Taken</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="averageScore">0%</div>
+            <div class="stat-label">Average Score</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-value" id="bestScore">0%</div>
+            <div class="stat-label">Best Score</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-value" id="currentStreak">0</div>
+            <div class="stat-label">Current Streak</div>
+        </div>
+    </div>
+    
+    <div class="topic-mastery">
+        <h4>Topic Mastery</h4>
+        <div class="mastery-bars" id="masteryBars">
+            <div class="mastery-item">
+                <span class="mastery-label">Current Electricity</span>
+                <div class="mastery-bar">
+                    <div class="mastery-fill" style="width: 0%;" data-topic="current"></div>
+                </div>
+                <span class="mastery-percent">0%</span>
+            </div>
+            <div class="mastery-item">
+                <span class="mastery-label">Resistance & Ohm's Law</span>
+                <div class="mastery-bar">
+                    <div class="mastery-fill" style="width: 0%;" data-topic="resistance"></div>
+                </div>
+                <span class="mastery-percent">0%</span>
+            </div>
+            <div class="mastery-item">
+                <span class="mastery-label">Non-Ohmic Conductors</span>
+                <div class="mastery-bar">
+                    <div class="mastery-fill" style="width: 0%;" data-topic="nonohmic"></div>
+                </div>
+                <span class="mastery-percent">0%</span>
+            </div>
+            <div class="mastery-item">
+                <span class="mastery-label">DC Circuits</span>
+                <div class="mastery-bar">
+                    <div class="mastery-fill" style="width: 0%;" data-topic="circuits"></div>
+                </div>
+                <span class="mastery-percent">0%</span>
+            </div>
+            <div class="mastery-item">
+                <span class="mastery-label">Potential Divider</span>
+                <div class="mastery-bar">
+                    <div class="mastery-fill" style="width: 0%;" data-topic="divider"></div>
+                </div>
+                <span class="mastery-percent">0%</span>
+            </div>
+            <div class="mastery-item">
+                <span class="mastery-label">Power & Energy</span>
+                <div class="mastery-bar">
+                    <div class="mastery-fill" style="width: 0%;" data-topic="power"></div>
+                </div>
+                <span class="mastery-percent">0%</span>
+            </div>
+            <div class="mastery-item">
+                <span class="mastery-label">Electrical Safety</span>
+                <div class="mastery-bar">
+                    <div class="mastery-fill" style="width: 0%;" data-topic="safety"></div>
+                </div>
+                <span class="mastery-percent">0%</span>
+            </div>
+        </div>
+    </div>
+    
+    <button class="btn btn-secondary" onclick="resetStats()">
+        <span>🗑️</span> Reset Statistics
+    </button>
+</div>
         </section>
 
     </main>
@@ -5304,4 +5489,3 @@
     <script src="js/simulator.js"></script>
 </body>
 </html>
-
