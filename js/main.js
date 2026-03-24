@@ -1526,3 +1526,4 @@ window.removeTrackerItem = removeTrackerItem;
 window.updateOverload = updateOverload;
 
 console.log('⚡ Main.js loaded successfully');
+
