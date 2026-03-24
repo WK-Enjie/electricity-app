@@ -3,6 +3,14 @@
 // Singapore O-Level Electricity App
 // ========================================
 
+// Safe parallel calculation helper (placed safely outside the classes)
+function calculateSafeParallel(r1, r2) {
+    if (r1 === 0 || r2 === 0) return 0; 
+    if (!isFinite(r1)) return r2;
+    if (!isFinite(r2)) return r1;
+    return (r1 * r2) / (r1 + r2);
+}
+
 // Circuit Component Classes
 class CircuitComponent {
     constructor(type, x, y) {
@@ -13,20 +21,8 @@ class CircuitComponent {
         this.rotation = 0;
         this.label = '';
         this.connections = { left: null, right: null, top: null, bottom: null };
-        
-        // Component-specific properties
         this.setDefaultProperties();
     }
-
-class FilamentLamp extends CircuitComponent {
-    // ...
-    getResistance(current) {
-        // Resistance increases as current (and therefore temperature) increases
-        const baseResistance = 10;
-        const heatingCoefficient = 0.5;
-        return baseResistance + (heatingCoefficient * Math.pow(current, 2));
-    }
-}
     
     setDefaultProperties() {
         switch(this.type) {
@@ -68,13 +64,13 @@ class FilamentLamp extends CircuitComponent {
                 this.name = 'Bulb';
                 break;
             case 'thermistor':
-                this.resistance = 10000; // 10kΩ at room temp
+                this.resistance = 10000;
                 this.temperature = 25;
                 this.icon = '🌡️';
                 this.name = 'Thermistor';
                 break;
             case 'ldr':
-                this.resistance = 5000; // 5kΩ at medium light
+                this.resistance = 5000;
                 this.lightLevel = 50;
                 this.icon = '☀️';
                 this.name = 'LDR';
@@ -101,13 +97,13 @@ class FilamentLamp extends CircuitComponent {
                 break;
             case 'ammeter':
                 this.reading = 0;
-                this.resistance = 0.001; // Very low resistance
+                this.resistance = 0.001;
                 this.icon = '🔴';
                 this.name = 'Ammeter';
                 break;
             case 'voltmeter':
                 this.reading = 0;
-                this.resistance = 1000000; // Very high resistance
+                this.resistance = 1000000;
                 this.icon = '🔵';
                 this.name = 'Voltmeter';
                 break;
@@ -118,32 +114,26 @@ class FilamentLamp extends CircuitComponent {
         }
     }
     
-    // Calculate thermistor resistance based on temperature
     updateThermistorResistance() {
         if (this.type === 'thermistor') {
-            // NTC thermistor: R decreases as T increases
-            // Simplified model: R = R25 * exp(B * (1/T - 1/298))
-            const R25 = 10000; // 10kΩ at 25°C
-            const B = 3950; // B constant
-            const T = this.temperature + 273.15; // Convert to Kelvin
+            const R25 = 10000;
+            const B = 3950;
+            const T = this.temperature + 273.15;
             const T25 = 298.15;
             this.resistance = R25 * Math.exp(B * (1/T - 1/T25));
         }
     }
     
-    // Calculate LDR resistance based on light level
     updateLDRResistance() {
         if (this.type === 'ldr') {
-            // LDR: R decreases as light increases
-            // Simplified model: R = Rdark * (light/100)^(-gamma)
-            const Rdark = 100000; // 100kΩ in darkness
+            const Rdark = 100000;
             const gamma = 0.8;
             if (this.lightLevel <= 0) {
                 this.resistance = Rdark;
             } else {
                 this.resistance = Rdark * Math.pow(this.lightLevel / 100, -gamma);
             }
-            this.resistance = Math.max(100, Math.min(100000, this.resistance)); // Clamp values
+            this.resistance = Math.max(100, Math.min(100000, this.resistance));
         }
     }
     
@@ -152,7 +142,6 @@ class FilamentLamp extends CircuitComponent {
     }
 }
 
-// Wire class
 class Wire {
     constructor(startX, startY, endX, endY) {
         this.id = 'wire_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -166,7 +155,6 @@ class Wire {
     }
 }
 
-// Circuit Simulator class
 class CircuitSimulator {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -177,20 +165,16 @@ class CircuitSimulator {
         this.isRunning = false;
         this.currentTool = 'wire';
         
-        // Wire drawing state
         this.isDrawingWire = false;
         this.wireStart = null;
         this.tempWireEnd = null;
         
-        // Drag state
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
         
-        // Grid settings
         this.gridSize = 20;
         this.snapToGrid = true;
         
-        // Initialize
         this.init();
     }
     
@@ -200,27 +184,22 @@ class CircuitSimulator {
     }
     
     setupEventListeners() {
-        // Canvas events
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
         
-        // Tool buttons
         document.getElementById('selectTool')?.addEventListener('click', () => this.setTool('select'));
         document.getElementById('wireTool')?.addEventListener('click', () => this.setTool('wire'));
         document.getElementById('deleteTool')?.addEventListener('click', () => this.setTool('delete'));
         
-        // Simulation controls
         document.getElementById('runSimulation')?.addEventListener('click', () => this.runSimulation());
         document.getElementById('stopSimulation')?.addEventListener('click', () => this.stopSimulation());
         document.getElementById('clearBoard')?.addEventListener('click', () => this.clearBoard());
         
-        // Component properties
         document.getElementById('rotateComponent')?.addEventListener('click', () => this.rotateSelected());
         document.getElementById('deleteComponent')?.addEventListener('click', () => this.deleteSelected());
         
-        // Property inputs
         document.getElementById('propResistance')?.addEventListener('change', (e) => {
             if (this.selectedComponent) {
                 this.selectedComponent.resistance = parseFloat(e.target.value);
@@ -255,22 +234,13 @@ class CircuitSimulator {
     
     setTool(tool) {
         this.currentTool = tool;
-        
-        // Update tool button states
         document.querySelectorAll('.toolbar-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(tool + 'Tool')?.classList.add('active');
         
-        // Update cursor
         switch(tool) {
-            case 'select':
-                this.canvas.style.cursor = 'default';
-                break;
-            case 'wire':
-                this.canvas.style.cursor = 'crosshair';
-                break;
-            case 'delete':
-                this.canvas.style.cursor = 'not-allowed';
-                break;
+            case 'select': this.canvas.style.cursor = 'default'; break;
+            case 'wire': this.canvas.style.cursor = 'crosshair'; break;
+            case 'delete': this.canvas.style.cursor = 'not-allowed'; break;
         }
     }
     
@@ -294,23 +264,15 @@ class CircuitSimulator {
     
     handleMouseDown(e) {
         const pos = this.getMousePos(e);
-        
         switch(this.currentTool) {
-            case 'select':
-                this.handleSelectDown(pos);
-                break;
-            case 'wire':
-                this.handleWireDown(pos);
-                break;
-            case 'delete':
-                this.handleDeleteAt(pos);
-                break;
+            case 'select': this.handleSelectDown(pos); break;
+            case 'wire': this.handleWireDown(pos); break;
+            case 'delete': this.handleDeleteAt(pos); break;
         }
     }
     
     handleMouseMove(e) {
         const pos = this.getMousePos(e);
-        
         if (this.isDrawingWire) {
             this.tempWireEnd = this.snapToGridPoint(pos.x, pos.y);
             this.render();
@@ -325,19 +287,14 @@ class CircuitSimulator {
     
     handleMouseUp(e) {
         const pos = this.getMousePos(e);
-        
         if (this.isDrawingWire && this.wireStart) {
             const endPoint = this.snapToGridPoint(pos.x, pos.y);
             if (this.wireStart.x !== endPoint.x || this.wireStart.y !== endPoint.y) {
-                const wire = new Wire(
-                    this.wireStart.x, this.wireStart.y,
-                    endPoint.x, endPoint.y
-                );
+                const wire = new Wire(this.wireStart.x, this.wireStart.y, endPoint.x, endPoint.y);
                 this.wires.push(wire);
                 this.updateWireCount();
             }
         }
-        
         this.isDrawingWire = false;
         this.wireStart = null;
         this.tempWireEnd = null;
@@ -348,26 +305,19 @@ class CircuitSimulator {
     handleDoubleClick(e) {
         const pos = this.getMousePos(e);
         const component = this.getComponentAt(pos);
-        
         if (component) {
-            // Toggle switch on double-click
             if (component.type === 'switch-open' || component.type === 'switch-closed') {
                 component.isClosed = !component.isClosed;
                 component.resistance = component.isClosed ? 0 : Infinity;
                 this.updatePropertiesPanel();
                 this.render();
-                
-                // Re-run simulation if running
-                if (this.isRunning) {
-                    this.calculateCircuit();
-                }
+                if (this.isRunning) this.calculateCircuit();
             }
         }
     }
     
     handleSelectDown(pos) {
         const component = this.getComponentAt(pos);
-        
         if (component) {
             this.selectComponent(component);
             this.isDragging = true;
@@ -387,18 +337,11 @@ class CircuitSimulator {
     }
     
     handleDeleteAt(pos) {
-        // Check for component
         const component = this.getComponentAt(pos);
-        if (component) {
-            this.deleteComponent(component);
-            return;
-        }
+        if (component) return this.deleteComponent(component);
         
-        // Check for wire
         const wire = this.getWireAt(pos);
-        if (wire) {
-            this.deleteWire(wire);
-        }
+        if (wire) this.deleteWire(wire);
     }
     
     getComponentAt(pos) {
@@ -457,9 +400,7 @@ class CircuitSimulator {
         const index = this.components.indexOf(component);
         if (index > -1) {
             this.components.splice(index, 1);
-            if (this.selectedComponent === component) {
-                this.deselectAll();
-            }
+            if (this.selectedComponent === component) this.deselectAll();
             this.updateComponentCount();
             this.render();
         }
@@ -475,9 +416,7 @@ class CircuitSimulator {
     }
     
     deleteSelected() {
-        if (this.selectedComponent) {
-            this.deleteComponent(this.selectedComponent);
-        }
+        if (this.selectedComponent) this.deleteComponent(this.selectedComponent);
     }
     
     rotateSelected() {
@@ -511,30 +450,23 @@ class CircuitSimulator {
     }
     
     updatePropertiesPanel() {
-        if (!this.selectedComponent) {
-            this.deselectAll();
-            return;
-        }
+        if (!this.selectedComponent) return this.deselectAll();
         
         const comp = this.selectedComponent;
         document.querySelector('.no-selection')?.classList.add('hidden');
         document.getElementById('componentProperties')?.classList.remove('hidden');
         
-        // Update header
         document.getElementById('selectedIcon').textContent = comp.icon;
         document.getElementById('selectedName').textContent = comp.name;
         
-        // Update properties based on component type
         const resistanceInput = document.getElementById('propResistance');
         const voltageGroup = document.getElementById('propVoltageGroup');
         const switchGroup = document.getElementById('propSwitchGroup');
         const labelInput = document.getElementById('propLabel');
         
-        // Reset visibility
         voltageGroup.style.display = 'none';
         switchGroup.style.display = 'none';
         
-        // Set values
         if (resistanceInput) {
             resistanceInput.value = comp.resistance;
             resistanceInput.disabled = ['cell', 'battery', 'dc-supply', 'ammeter'].includes(comp.type);
@@ -550,28 +482,15 @@ class CircuitSimulator {
             document.getElementById('propSwitchState').checked = comp.isClosed;
         }
         
-        if (labelInput) {
-            labelInput.value = comp.label || '';
-        }
+        if (labelInput) labelInput.value = comp.label || '';
     }
     
-    // Rendering methods
     render() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw grid (subtle)
         this.drawGrid();
-        
-        // Draw wires
         this.drawWires();
-        
-        // Draw components
         this.drawComponents();
-        
-        // Draw selection highlight
-        if (this.selectedComponent) {
-            this.drawSelectionHighlight(this.selectedComponent);
-        }
+        if (this.selectedComponent) this.drawSelectionHighlight(this.selectedComponent);
     }
     
     drawGrid() {
@@ -579,17 +498,10 @@ class CircuitSimulator {
         this.ctx.lineWidth = 1;
         
         for (let x = 0; x <= this.canvas.width; x += this.gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.canvas.height);
-            this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvas.height); this.ctx.stroke();
         }
-        
         for (let y = 0; y <= this.canvas.height; y += this.gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.canvas.width, y);
-            this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvas.width, y); this.ctx.stroke();
         }
     }
     
@@ -602,7 +514,6 @@ class CircuitSimulator {
             this.ctx.lineWidth = 3;
             
             if (this.isRunning && wire.current > 0) {
-                // Animated current flow
                 this.ctx.setLineDash([10, 5]);
                 this.ctx.strokeStyle = '#22d3ee';
             } else {
@@ -612,14 +523,9 @@ class CircuitSimulator {
             this.ctx.stroke();
             this.ctx.setLineDash([]);
             
-            // Draw connection dots
             this.ctx.fillStyle = '#fbbf24';
-            this.ctx.beginPath();
-            this.ctx.arc(wire.startX, wire.startY, 4, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.beginPath();
-            this.ctx.arc(wire.endX, wire.endY, 4, 0, Math.PI * 2);
-            this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(wire.startX, wire.startY, 4, 0, Math.PI * 2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(wire.endX, wire.endY, 4, 0, Math.PI * 2); this.ctx.fill();
         });
     }
     
@@ -637,9 +543,7 @@ class CircuitSimulator {
     }
     
     drawComponents() {
-        this.components.forEach(comp => {
-            this.drawComponent(comp);
-        });
+        this.components.forEach(comp => this.drawComponent(comp));
     }
     
     drawComponent(comp) {
@@ -647,159 +551,73 @@ class CircuitSimulator {
         this.ctx.translate(comp.x, comp.y);
         this.ctx.rotate(comp.rotation * Math.PI / 180);
         
-        const color = '#fbbf24';
-        this.ctx.strokeStyle = color;
-        this.ctx.fillStyle = color;
+        this.ctx.strokeStyle = '#fbbf24';
+        this.ctx.fillStyle = '#fbbf24';
         this.ctx.lineWidth = 2;
         
         switch(comp.type) {
-            case 'cell':
-                this.drawCell();
-                break;
-            case 'battery':
-                this.drawBattery();
-                break;
-            case 'resistor':
-                this.drawResistor();
-                break;
-            case 'bulb':
-                this.drawBulb(comp.isOn);
-                break;
+            case 'cell': this.drawCell(); break;
+            case 'battery': this.drawBattery(); break;
+            case 'resistor': this.drawResistor(); break;
+            case 'bulb': this.drawBulb(comp.isOn); break;
             case 'switch-open':
-            case 'switch-closed':
-                this.drawSwitch(comp.isClosed);
-                break;
-            case 'ammeter':
-                this.drawAmmeter(comp.reading);
-                break;
-            case 'voltmeter':
-                this.drawVoltmeter(comp.reading);
-                break;
-            case 'diode':
-                this.drawDiode();
-                break;
-            case 'led':
-                this.drawLED(comp.isOn);
-                break;
-            case 'thermistor':
-                this.drawThermistor();
-                break;
-            case 'ldr':
-                this.drawLDR();
-                break;
-            case 'variable-resistor':
-                this.drawVariableResistor();
-                break;
+            case 'switch-closed': this.drawSwitch(comp.isClosed); break;
+            case 'ammeter': this.drawAmmeter(comp.reading); break;
+            case 'voltmeter': this.drawVoltmeter(comp.reading); break;
+            case 'diode': this.drawDiode(); break;
+            case 'led': this.drawLED(comp.isOn); break;
+            case 'thermistor': this.drawThermistor(); break;
+            case 'ldr': this.drawLDR(); break;
+            case 'variable-resistor': this.drawVariableResistor(); break;
         }
         
-        // Draw label if exists
         if (comp.label) {
             this.ctx.fillStyle = '#94a3b8';
             this.ctx.font = '12px sans-serif';
             this.ctx.textAlign = 'center';
             this.ctx.fillText(comp.label, 0, 35);
         }
-        
         this.ctx.restore();
     }
     
-    // Component drawing methods
     drawCell() {
-        // Left wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(-30, 0);
-        this.ctx.lineTo(-8, 0);
-        this.ctx.stroke();
-        
-        // Long line (positive)
-        this.ctx.beginPath();
-        this.ctx.moveTo(-8, -15);
-        this.ctx.lineTo(-8, 15);
-        this.ctx.lineWidth = 3;
-        this.ctx.stroke();
-        
-        // Short line (negative)
-        this.ctx.beginPath();
-        this.ctx.moveTo(4, -8);
-        this.ctx.lineTo(4, 8);
-        this.ctx.lineWidth = 6;
-        this.ctx.stroke();
-        
-        // Right wire
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(4, 0);
-        this.ctx.lineTo(30, 0);
-        this.ctx.stroke();
-        
-        // + and - labels
-        this.ctx.font = '10px sans-serif';
-        this.ctx.fillText('+', -15, -10);
-        this.ctx.fillText('-', 10, -10);
+        this.ctx.beginPath(); this.ctx.moveTo(-30, 0); this.ctx.lineTo(-8, 0); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-8, -15); this.ctx.lineTo(-8, 15); this.ctx.lineWidth = 3; this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(4, -8); this.ctx.lineTo(4, 8); this.ctx.lineWidth = 6; this.ctx.stroke();
+        this.ctx.lineWidth = 2; this.ctx.beginPath(); this.ctx.moveTo(4, 0); this.ctx.lineTo(30, 0); this.ctx.stroke();
+        this.ctx.font = '10px sans-serif'; this.ctx.fillText('+', -15, -10); this.ctx.fillText('-', 10, -10);
     }
     
     drawBattery() {
-        // Multiple cells
         for (let i = 0; i < 3; i++) {
             const offset = -15 + i * 15;
-            
-            // Long line
-            this.ctx.beginPath();
-            this.ctx.moveTo(offset, -12);
-            this.ctx.lineTo(offset, 12);
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-            
-            // Short line
-            this.ctx.beginPath();
-            this.ctx.moveTo(offset + 6, -6);
-            this.ctx.lineTo(offset + 6, 6);
-            this.ctx.lineWidth = 4;
-            this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(offset, -12); this.ctx.lineTo(offset, 12); this.ctx.lineWidth = 2; this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(offset + 6, -6); this.ctx.lineTo(offset + 6, 6); this.ctx.lineWidth = 4; this.ctx.stroke();
         }
-        
-        // Wires
         this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(-35, 0);
-        this.ctx.lineTo(-15, 0);
-        this.ctx.stroke();
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(27, 0);
-        this.ctx.lineTo(35, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-35, 0); this.ctx.lineTo(-15, 0); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(27, 0); this.ctx.lineTo(35, 0); this.ctx.stroke();
     }
     
     drawResistor() {
-        // Left wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(-35, 0);
-        this.ctx.lineTo(-20, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-35, 0); this.ctx.lineTo(-20, 0); this.ctx.stroke();
         
-        // Rectangle - ADDED BACKGROUND FILL
-        this.ctx.fillStyle = '#0f172a'; // Matches the circuit board background
+        // Solid fill added here to prevent wires showing through
+        this.ctx.fillStyle = '#0f172a'; 
         this.ctx.fillRect(-20, -10, 40, 20);
         this.ctx.strokeRect(-20, -10, 40, 20);
         
-        // Right wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(20, 0);
-        this.ctx.lineTo(35, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(20, 0); this.ctx.lineTo(35, 0); this.ctx.stroke();
     }
     
     drawBulb(isOn) {
-        // Left wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(-35, 0);
-        this.ctx.lineTo(-18, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-35, 0); this.ctx.lineTo(-18, 0); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(0, 0, 18, 0, Math.PI * 2);
         
-        // Circle
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        // Added solid fill for 'off' state to hide wires passing behind
+        this.ctx.fillStyle = '#0f172a';
+        this.ctx.fill();
+
         if (isOn) {
             this.ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
             this.ctx.fill();
@@ -809,240 +627,88 @@ class CircuitSimulator {
         this.ctx.stroke();
         this.ctx.shadowBlur = 0;
         
-        // Cross
-        this.ctx.beginPath();
-        this.ctx.moveTo(-12, -12);
-        this.ctx.lineTo(12, 12);
-        this.ctx.stroke();
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(12, -12);
-        this.ctx.lineTo(-12, 12);
-        this.ctx.stroke();
-        
-        // Right wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(18, 0);
-        this.ctx.lineTo(35, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-12, -12); this.ctx.lineTo(12, 12); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(12, -12); this.ctx.lineTo(-12, 12); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(18, 0); this.ctx.lineTo(35, 0); this.ctx.stroke();
     }
     
     drawSwitch(isClosed) {
-        // Left wire and dot
-        this.ctx.beginPath();
-        this.ctx.moveTo(-35, 0);
-        this.ctx.lineTo(-15, 0);
+        this.ctx.beginPath(); this.ctx.moveTo(-35, 0); this.ctx.lineTo(-15, 0); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(-12, 0, 4, 0, Math.PI * 2); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(-12, 0);
+        if (isClosed) this.ctx.lineTo(12, 0); else this.ctx.lineTo(8, -15);
         this.ctx.stroke();
-        
-        this.ctx.beginPath();
-        this.ctx.arc(-12, 0, 4, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Switch arm
-        this.ctx.beginPath();
-        this.ctx.moveTo(-12, 0);
-        if (isClosed) {
-            this.ctx.lineTo(12, 0);
-        } else {
-            this.ctx.lineTo(8, -15);
-        }
-        this.ctx.stroke();
-        
-        // Right dot and wire
-        this.ctx.beginPath();
-        this.ctx.arc(12, 0, 4, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(15, 0);
-        this.ctx.lineTo(35, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(12, 0, 4, 0, Math.PI * 2); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(15, 0); this.ctx.lineTo(35, 0); this.ctx.stroke();
     }
     
     drawAmmeter(reading) {
-        // Left wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(-35, 0);
-        this.ctx.lineTo(-18, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-35, 0); this.ctx.lineTo(-18, 0); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        this.ctx.fillStyle = '#0f172a'; this.ctx.fill(); this.ctx.stroke();
         
-        // Circle
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, 18, 0, Math.PI * 2);
-        this.ctx.stroke();
-        
-        // A label
-        this.ctx.fillStyle = '#ef4444';
-        this.ctx.font = 'bold 16px sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
+        this.ctx.fillStyle = '#ef4444'; this.ctx.font = 'bold 16px sans-serif'; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
         this.ctx.fillText('A', 0, 0);
         
-        // Right wire
-        this.ctx.strokeStyle = '#fbbf24';
-        this.ctx.beginPath();
-        this.ctx.moveTo(18, 0);
-        this.ctx.lineTo(35, 0);
-        this.ctx.stroke();
-        
-        // Reading
+        this.ctx.strokeStyle = '#fbbf24'; this.ctx.beginPath(); this.ctx.moveTo(18, 0); this.ctx.lineTo(35, 0); this.ctx.stroke();
         if (reading > 0) {
-            this.ctx.fillStyle = '#22d3ee';
-            this.ctx.font = '10px sans-serif';
-            this.ctx.fillText(reading.toFixed(2) + 'A', 0, 28);
+            this.ctx.fillStyle = '#22d3ee'; this.ctx.font = '10px sans-serif'; this.ctx.fillText(reading.toFixed(2) + 'A', 0, 28);
         }
     }
     
     drawVoltmeter(reading) {
-        // Left wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(-35, 0);
-        this.ctx.lineTo(-18, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-35, 0); this.ctx.lineTo(-18, 0); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(0, 0, 18, 0, Math.PI * 2); 
+        this.ctx.fillStyle = '#0f172a'; this.ctx.fill(); this.ctx.stroke();
         
-        // Circle
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, 18, 0, Math.PI * 2);
-        this.ctx.stroke();
-        
-        // V label
-        this.ctx.fillStyle = '#3b82f6';
-        this.ctx.font = 'bold 16px sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
+        this.ctx.fillStyle = '#3b82f6'; this.ctx.font = 'bold 16px sans-serif'; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
         this.ctx.fillText('V', 0, 0);
         
-        // Right wire
-        this.ctx.strokeStyle = '#fbbf24';
-        this.ctx.beginPath();
-        this.ctx.moveTo(18, 0);
-        this.ctx.lineTo(35, 0);
-        this.ctx.stroke();
-        
-        // Reading
+        this.ctx.strokeStyle = '#fbbf24'; this.ctx.beginPath(); this.ctx.moveTo(18, 0); this.ctx.lineTo(35, 0); this.ctx.stroke();
         if (reading > 0) {
-            this.ctx.fillStyle = '#22d3ee';
-            this.ctx.font = '10px sans-serif';
-            this.ctx.fillText(reading.toFixed(2) + 'V', 0, 28);
+            this.ctx.fillStyle = '#22d3ee'; this.ctx.font = '10px sans-serif'; this.ctx.fillText(reading.toFixed(2) + 'V', 0, 28);
         }
     }
     
     drawDiode() {
-        // Left wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(-35, 0);
-        this.ctx.lineTo(-15, 0);
-        this.ctx.stroke();
-        
-        // Triangle
-        this.ctx.beginPath();
-        this.ctx.moveTo(-15, -12);
-        this.ctx.lineTo(-15, 12);
-        this.ctx.lineTo(10, 0);
-        this.ctx.closePath();
-        this.ctx.stroke();
-        
-        // Bar
-        this.ctx.beginPath();
-        this.ctx.moveTo(10, -12);
-        this.ctx.lineTo(10, 12);
-        this.ctx.stroke();
-        
-        // Right wire
-        this.ctx.beginPath();
-        this.ctx.moveTo(10, 0);
-        this.ctx.lineTo(35, 0);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-35, 0); this.ctx.lineTo(-15, 0); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-15, -12); this.ctx.lineTo(-15, 12); this.ctx.lineTo(10, 0); this.ctx.closePath(); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(10, -12); this.ctx.lineTo(10, 12); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(10, 0); this.ctx.lineTo(35, 0); this.ctx.stroke();
     }
     
     drawLED(isOn) {
         this.drawDiode();
-        
-        // Light rays
-        this.ctx.beginPath();
-        this.ctx.moveTo(15, -15);
-        this.ctx.lineTo(22, -22);
-        this.ctx.stroke();
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(20, -12);
-        this.ctx.lineTo(27, -19);
-        this.ctx.stroke();
-        
-        // Arrow heads
-        this.ctx.beginPath();
-        this.ctx.moveTo(22, -22);
-        this.ctx.lineTo(18, -19);
-        this.ctx.lineTo(20, -23);
-        this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(15, -15); this.ctx.lineTo(22, -22); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(20, -12); this.ctx.lineTo(27, -19); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(22, -22); this.ctx.lineTo(18, -19); this.ctx.lineTo(20, -23); this.ctx.fill();
         
         if (isOn) {
-            this.ctx.shadowColor = '#ef4444';
-            this.ctx.shadowBlur = 15;
+            this.ctx.shadowColor = '#ef4444'; this.ctx.shadowBlur = 15;
             this.ctx.fillStyle = 'rgba(239, 68, 68, 0.5)';
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, 10, 0, Math.PI * 2);
-            this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(0, 0, 10, 0, Math.PI * 2); this.ctx.fill();
             this.ctx.shadowBlur = 0;
         }
     }
     
     drawThermistor() {
         this.drawResistor();
-        
-        // Diagonal line with T
-        this.ctx.beginPath();
-        this.ctx.moveTo(-25, 18);
-        this.ctx.lineTo(25, -18);
-        this.ctx.stroke();
-        
-        this.ctx.font = '10px sans-serif';
-        this.ctx.fillText('T', 28, -15);
+        this.ctx.beginPath(); this.ctx.moveTo(-25, 18); this.ctx.lineTo(25, -18); this.ctx.stroke();
+        this.ctx.font = '10px sans-serif'; this.ctx.fillText('T', 28, -15);
     }
     
     drawLDR() {
         this.drawResistor();
-        
-        // Light arrows
-        this.ctx.beginPath();
-        this.ctx.moveTo(-15, -20);
-        this.ctx.lineTo(-5, -12);
-        this.ctx.stroke();
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(-5, -25);
-        this.ctx.lineTo(5, -17);
-        this.ctx.stroke();
-        
-        // Arrow heads
-        this.ctx.beginPath();
-        this.ctx.moveTo(-5, -12);
-        this.ctx.lineTo(-9, -15);
-        this.ctx.lineTo(-6, -16);
-        this.ctx.fill();
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(5, -17);
-        this.ctx.lineTo(1, -20);
-        this.ctx.lineTo(4, -21);
-        this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(-15, -20); this.ctx.lineTo(-5, -12); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-5, -25); this.ctx.lineTo(5, -17); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(-5, -12); this.ctx.lineTo(-9, -15); this.ctx.lineTo(-6, -16); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(5, -17); this.ctx.lineTo(1, -20); this.ctx.lineTo(4, -21); this.ctx.fill();
     }
     
     drawVariableResistor() {
         this.drawResistor();
-        
-        // Arrow through
-        this.ctx.beginPath();
-        this.ctx.moveTo(-15, 20);
-        this.ctx.lineTo(15, -15);
-        this.ctx.stroke();
-        
-        // Arrow head
-        this.ctx.beginPath();
-        this.ctx.moveTo(15, -15);
-        this.ctx.lineTo(10, -10);
-        this.ctx.lineTo(12, -17);
-        this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(-15, 20); this.ctx.lineTo(15, -15); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(15, -15); this.ctx.lineTo(10, -10); this.ctx.lineTo(12, -17); this.ctx.fill();
     }
     
     drawSelectionHighlight(comp) {
@@ -1055,7 +721,6 @@ class CircuitSimulator {
         this.ctx.restore();
     }
     
-    // Simulation methods
     runSimulation() {
         this.isRunning = true;
         document.getElementById('runSimulation').disabled = true;
@@ -1074,27 +739,17 @@ class CircuitSimulator {
         document.getElementById('circuitStatus').textContent = 'Stopped';
         document.getElementById('circuitStatus').style.color = '#f59e0b';
         
-        // Reset component states
         this.components.forEach(comp => {
-            if (comp.type === 'bulb' || comp.type === 'led') {
-                comp.isOn = false;
-            }
-            if (comp.type === 'ammeter' || comp.type === 'voltmeter') {
-                comp.reading = 0;
-            }
+            if (comp.type === 'bulb' || comp.type === 'led') comp.isOn = false;
+            if (comp.type === 'ammeter' || comp.type === 'voltmeter') comp.reading = 0;
         });
         
-        this.wires.forEach(wire => {
-            wire.current = 0;
-        });
-        
+        this.wires.forEach(wire => wire.current = 0);
         this.render();
         this.clearMeasurements();
     }
     
     calculateCircuit() {
-        // Simplified circuit analysis
-        // Find voltage sources
         const sources = this.components.filter(c => 
             c.type === 'cell' || c.type === 'battery' || c.type === 'dc-supply'
         );
@@ -1104,11 +759,9 @@ class CircuitSimulator {
             return;
         }
         
-        // Calculate total EMF
         let totalEMF = 0;
         sources.forEach(s => totalEMF += s.voltage);
         
-        // Calculate total resistance
         let totalResistance = 0;
         this.components.forEach(comp => {
             if (comp.type !== 'cell' && comp.type !== 'battery' && 
@@ -1116,59 +769,29 @@ class CircuitSimulator {
                 if (comp.resistance !== Infinity) {
                     totalResistance += comp.resistance;
                 } else {
-                    // Open switch - circuit is open
                     totalResistance = Infinity;
                 }
             }
         });
         
-        // Calculate current
         let current = 0;
         if (totalResistance !== Infinity && totalResistance > 0) {
             current = totalEMF / totalResistance;
         }
         
-        // Update component states
         this.components.forEach(comp => {
-            if (comp.type === 'ammeter') {
-                comp.reading = current;
-            }
+            if (comp.type === 'ammeter') comp.reading = current;
             if (comp.type === 'bulb' || comp.type === 'led') {
                 comp.isOn = current > 0.01;
                 comp.power = current * current * comp.resistance;
             }
-            if (comp.type === 'voltmeter') {
-                // Simplified: show EMF
-                comp.reading = totalEMF;
-            }
+            if (comp.type === 'voltmeter') comp.reading = totalEMF;
         });
         
-        // Set current in wires
-        this.wires.forEach(wire => {
-            wire.current = current;
-        });
-        
-        // Update display
+        this.wires.forEach(wire => wire.current = current);
         this.updateMeasurements(totalEMF, current, totalResistance);
         this.render();
     }
-
-
-        // Add this helper function to your math logic
-function calculateSafeParallel(r1, r2) {
-    // If either path has 0 resistance, the whole parallel block is shorted to 0
-    if (r1 === 0 || r2 === 0) {
-        return 0; 
-    }
-    // Handle open circuits (disconnected wires)
-    if (!isFinite(r1)) return r2;
-    if (!isFinite(r2)) return r1;
-    
-    // Standard product-over-sum formula is mathematically safer in JS 
-    // than (1/r1 + 1/r2)^-1
-    return (r1 * r2) / (r1 + r2);
-}
-
     
     updateMeasurements(voltage, current, resistance) {
         document.getElementById('measTotalVoltage').textContent = voltage.toFixed(2);
@@ -1176,7 +799,6 @@ function calculateSafeParallel(r1, r2) {
         document.getElementById('measTotalResistance').textContent = resistance === Infinity ? '∞' : resistance.toFixed(1);
         document.getElementById('measTotalPower').textContent = (voltage * current).toFixed(2);
         
-        // Update component readings
         const readingsList = document.getElementById('readingsList');
         readingsList.innerHTML = '';
         
@@ -1211,7 +833,6 @@ function calculateSafeParallel(r1, r2) {
     
     animateCurrentFlow() {
         if (!this.isRunning) return;
-        
         this.render();
         requestAnimationFrame(() => this.animateCurrentFlow());
     }
@@ -1221,25 +842,14 @@ function calculateSafeParallel(r1, r2) {
         this.stopSimulation();
     }
     
-    // Load example circuits
     loadExample(exampleName) {
         this.clearBoard();
-        
         switch(exampleName) {
-            case 'series-simple':
-                this.loadSeriesSimple();
-                break;
-            case 'parallel-bulbs':
-                this.loadParallelBulbs();
-                break;
-            case 'potential-divider':
-                this.loadPotentialDivider();
-                break;
-            case 'ammeter-voltmeter':
-                this.loadAmmeterVoltmeter();
-                break;
+            case 'series-simple': this.loadSeriesSimple(); break;
+            case 'parallel-bulbs': this.loadParallelBulbs(); break;
+            case 'potential-divider': this.loadPotentialDivider(); break;
+            case 'ammeter-voltmeter': this.loadAmmeterVoltmeter(); break;
         }
-        
         this.render();
     }
     
@@ -1247,15 +857,12 @@ function calculateSafeParallel(r1, r2) {
         this.addComponent('battery', 100, 200);
         this.addComponent('switch-closed', 250, 200);
         this.addComponent('bulb', 400, 200);
-        
-        // Add wires
         this.wires.push(new Wire(130, 200, 215, 200));
         this.wires.push(new Wire(285, 200, 365, 200));
         this.wires.push(new Wire(435, 200, 500, 200));
         this.wires.push(new Wire(500, 200, 500, 300));
         this.wires.push(new Wire(500, 300, 100, 300));
         this.wires.push(new Wire(100, 300, 100, 200));
-        
         this.updateComponentCount();
         this.updateWireCount();
     }
@@ -1264,8 +871,6 @@ function calculateSafeParallel(r1, r2) {
         this.addComponent('battery', 100, 200);
         this.addComponent('bulb', 400, 150);
         this.addComponent('bulb', 400, 250);
-        
-        // Wires for parallel
         this.wires.push(new Wire(130, 200, 250, 200));
         this.wires.push(new Wire(250, 200, 250, 150));
         this.wires.push(new Wire(250, 200, 250, 250));
@@ -1278,7 +883,6 @@ function calculateSafeParallel(r1, r2) {
         this.wires.push(new Wire(500, 200, 500, 320));
         this.wires.push(new Wire(500, 320, 100, 320));
         this.wires.push(new Wire(100, 320, 100, 200));
-        
         this.updateComponentCount();
         this.updateWireCount();
     }
@@ -1286,17 +890,11 @@ function calculateSafeParallel(r1, r2) {
     loadPotentialDivider() {
         this.addComponent('dc-supply', 100, 200);
         this.components[0].voltage = 12;
-        
         const r1 = this.addComponent('resistor', 350, 150);
-        r1.resistance = 10000;
-        r1.label = 'R1';
-        
+        r1.resistance = 10000; r1.label = 'R1';
         const r2 = this.addComponent('resistor', 350, 250);
-        r2.resistance = 10000;
-        r2.label = 'R2';
-        
+        r2.resistance = 10000; r2.label = 'R2';
         this.addComponent('voltmeter', 500, 250);
-        
         this.updateComponentCount();
         this.updateWireCount();
     }
@@ -1306,27 +904,19 @@ function calculateSafeParallel(r1, r2) {
         this.addComponent('ammeter', 250, 200);
         this.addComponent('resistor', 400, 200);
         this.addComponent('voltmeter', 400, 320);
-        
         this.updateComponentCount();
         this.updateWireCount();
     }
 }
 
-// Initialize simulator when DOM is ready
 let circuitSimulator;
 
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('circuitCanvas');
     if (canvas) {
         circuitSimulator = new CircuitSimulator('circuitCanvas');
-        
-        // Setup drag and drop from toolbox
         setupComponentDragDrop();
-        
-        // Setup example modal
         setupExampleModal();
-        
-        // Setup symbol reference toggle
         document.getElementById('toggleSymbolRef')?.addEventListener('click', () => {
             document.getElementById('symbolRefContent')?.classList.toggle('hidden');
         });
@@ -1342,10 +932,7 @@ function setupComponentDragDrop() {
             e.dataTransfer.setData('componentType', item.dataset.component);
             item.classList.add('dragging');
         });
-        
-        item.addEventListener('dragend', () => {
-            item.classList.remove('dragging');
-        });
+        item.addEventListener('dragend', () => item.classList.remove('dragging'));
     });
     
     circuitBoard?.addEventListener('dragover', (e) => {
@@ -1371,18 +958,10 @@ function setupExampleModal() {
     const closeBtn = document.getElementById('closeExampleModal');
     const exampleCards = document.querySelectorAll('.example-card');
     
-    loadBtn?.addEventListener('click', () => {
-        modal?.classList.remove('hidden');
-    });
-    
-    closeBtn?.addEventListener('click', () => {
-        modal?.classList.add('hidden');
-    });
-    
+    loadBtn?.addEventListener('click', () => modal?.classList.remove('hidden'));
+    closeBtn?.addEventListener('click', () => modal?.classList.add('hidden'));
     modal?.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.add('hidden');
-        }
+        if (e.target === modal) modal.classList.add('hidden');
     });
     
     exampleCards.forEach(card => {
