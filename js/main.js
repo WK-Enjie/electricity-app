@@ -168,10 +168,16 @@ function initSubtopicContent(subtopicId) {
                 initNonOhmicGraphs();
                 break;
             case 'series-section':
+                drawStaticSeriesCircuit(); // Fix
                 drawSeriesCircuit();
                 break;
             case 'parallel-section':
+                drawStaticParallelCircuit(); // Fix
                 drawParallelCircuit();
+                break;
+            case 'combined-section':
+                drawCombinedCircuit(); // Fix
+                break;
                 break;
             case 'divider-section':
                 drawPotentialDivider();
@@ -1016,6 +1022,10 @@ function updateCombinedCircuit() {
     document.getElementById('stepParallelR').textContent = rParallel.toFixed(1);
     document.getElementById('stepTotalR').textContent = rTotal.toFixed(1);
     document.getElementById('stepTotalI').textContent = current.toFixed(2);
+    if (typeof drawCombinedCircuit === 'function') {
+        drawCombinedCircuit();
+    }
+
 }
 
 // Potential Divider
@@ -1409,8 +1419,11 @@ function initCurrentElectricityCanvases() {
 }
 
 function initDCCircuitsCanvases() {
-    drawSeriesCircuit();
-    drawParallelCircuit();
+    drawStaticSeriesCircuit();    // Fix: Added static series call
+    drawSeriesCircuit();          // Handles the interactive one
+    drawStaticParallelCircuit();  // Fix: Added static parallel call
+    drawParallelCircuit();        // Handles the interactive one
+    drawCombinedCircuit();        // Fix: Added combined circuit call
     drawPotentialDivider();
 }
 

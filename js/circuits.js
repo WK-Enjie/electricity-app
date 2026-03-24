@@ -17,6 +17,16 @@ class CircuitComponent {
         // Component-specific properties
         this.setDefaultProperties();
     }
+
+class FilamentLamp extends CircuitComponent {
+    // ...
+    getResistance(current) {
+        // Resistance increases as current (and therefore temperature) increases
+        const baseResistance = 10;
+        const heatingCoefficient = 0.5;
+        return baseResistance + (heatingCoefficient * Math.pow(current, 2));
+    }
+}
     
     setDefaultProperties() {
         switch(this.type) {
@@ -768,7 +778,9 @@ class CircuitSimulator {
         this.ctx.lineTo(-20, 0);
         this.ctx.stroke();
         
-        // Rectangle
+        // Rectangle - ADDED BACKGROUND FILL
+        this.ctx.fillStyle = '#0f172a'; // Matches the circuit board background
+        this.ctx.fillRect(-20, -10, 40, 20);
         this.ctx.strokeRect(-20, -10, 40, 20);
         
         // Right wire
@@ -1140,6 +1152,23 @@ class CircuitSimulator {
         this.updateMeasurements(totalEMF, current, totalResistance);
         this.render();
     }
+
+
+        // Add this helper function to your math logic
+function calculateSafeParallel(r1, r2) {
+    // If either path has 0 resistance, the whole parallel block is shorted to 0
+    if (r1 === 0 || r2 === 0) {
+        return 0; 
+    }
+    // Handle open circuits (disconnected wires)
+    if (!isFinite(r1)) return r2;
+    if (!isFinite(r2)) return r1;
+    
+    // Standard product-over-sum formula is mathematically safer in JS 
+    // than (1/r1 + 1/r2)^-1
+    return (r1 * r2) / (r1 + r2);
+}
+
     
     updateMeasurements(voltage, current, resistance) {
         document.getElementById('measTotalVoltage').textContent = voltage.toFixed(2);

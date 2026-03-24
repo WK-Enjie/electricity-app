@@ -259,7 +259,9 @@ function drawResistorSymbol(ctx, x, y, options = {}) {
     ctx.lineTo(x - width/2, y);
     ctx.stroke();
     
-    // Rectangle
+    // Rectangle - ADDED BACKGROUND FILL TO HIDE WIRE
+    ctx.fillStyle = Colors.background; // Fills with #0f172a
+    ctx.fillRect(x - width/2, y - height/2, width, height);
     ctx.strokeRect(x - width/2, y - height/2, width, height);
     
     // Right wire
@@ -283,7 +285,6 @@ function drawResistorSymbol(ctx, x, y, options = {}) {
         ctx.fillText(options.value, x, y);
     }
 }
-
 function drawBulbSymbol(ctx, x, y, isOn = false, options = {}) {
     const scale = options.scale || 1;
     const radius = 15 * scale;
@@ -2185,6 +2186,143 @@ console.log('⚡ Animations Part B loaded');
 // Part 10C: DC Circuits, Practical & Safety
 // ========================================
 
+// ===== NEW: STATIC SERIES CIRCUIT =====
+function drawStaticSeriesCircuit() {
+    const canvasData = getCanvas('seriesCircuitCanvas');
+    if (!canvasData) return;
+    
+    const { ctx, width, height } = canvasData;
+    clearCanvas(ctx, width, height);
+    
+    const margin = 60;
+    
+    ctx.strokeStyle = Colors.wire;
+    ctx.lineWidth = 3;
+    
+    // Draw wire loop
+    drawWire(ctx, margin, margin, width - margin, margin);
+    drawWire(ctx, width - margin, margin, width - margin, height - margin);
+    drawWire(ctx, width - margin, height - margin, margin, height - margin);
+    drawWire(ctx, margin, height - margin, margin, margin);
+    
+    // Draw Components
+    drawBatterySymbol(ctx, width / 2, margin, 3);
+    drawResistorSymbol(ctx, width / 2 - 80, height - margin, { label: 'R₁' });
+    drawResistorSymbol(ctx, width / 2 + 80, height - margin, { label: 'R₂' });
+    
+    // Add current arrows
+    drawArrow(ctx, width - margin, height/2 - 20, width - margin, height/2 + 20, { color: Colors.conventionalCurrent });
+    ctx.fillStyle = Colors.conventionalCurrent;
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('I', width - margin - 20, height/2);
+}
+
+// ===== NEW: STATIC PARALLEL CIRCUIT =====
+function drawStaticParallelCircuit() {
+    const canvasData = getCanvas('parallelCircuitCanvas');
+    if (!canvasData) return;
+    
+    const { ctx, width, height } = canvasData;
+    clearCanvas(ctx, width, height);
+    
+    const margin = 50;
+    const branch1Y = height/2 - 30;
+    const branch2Y = height/2 + 60;
+    
+    ctx.strokeStyle = Colors.wire;
+    ctx.lineWidth = 3;
+    
+    // Left side
+    drawWire(ctx, margin, margin, width/2 - 100, margin);
+    drawWire(ctx, margin, margin, margin, branch2Y);
+    drawBatterySymbol(ctx, width/2, margin, 3);
+    drawWire(ctx, width/2 + 100, margin, width - margin, margin);
+    drawWire(ctx, width - margin, margin, width - margin, branch2Y);
+    
+    // Branches
+    drawWire(ctx, margin, branch1Y, width - margin, branch1Y);
+    drawWire(ctx, margin, branch2Y, width - margin, branch2Y);
+    
+    // Junction dots
+    ctx.fillStyle = Colors.wire;
+    [branch1Y, branch2Y].forEach(y => {
+        ctx.beginPath(); ctx.arc(margin, y, 5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(width - margin, y, 5, 0, Math.PI*2); ctx.fill();
+    });
+    
+    // Resistors
+    drawResistorSymbol(ctx, width/2, branch1Y, { label: 'R₁' });
+    drawResistorSymbol(ctx, width/2, branch2Y, { label: 'R₂' });
+}
+
+// ===== NEW: COMBINED CIRCUIT =====
+function drawCombinedCircuit() {
+    const canvasData = getCanvas('combinedCircuitCanvas');
+    if (!canvasData) return;
+    
+    const { ctx, width, height } = canvasData;
+    clearCanvas(ctx, width, height);
+    
+    const emf = parseFloat(document.getElementById('combinedEmfSlider')?.value) || 12;
+    const r1 = parseFloat(document.getElementById('combinedR1Slider')?.value) || 10;
+    const r2 = parseFloat(document.getElementById('combinedR2Slider')?.value) || 20;
+    const r3 = parseFloat(document.getElementById('combinedR3Slider')?.value) || 20;
+    
+    const isType1 = document.getElementById('configType1')?.classList.contains('active');
+    const margin = 50;
+    
+    ctx.strokeStyle = Colors.wire;
+    ctx.lineWidth = 3;
+    
+    // Battery at top
+    drawWire(ctx, margin, margin, width - margin, margin);
+    drawWire(ctx, margin, margin, margin, height - margin);
+    drawWire(ctx, width - margin, margin, width - margin, height - margin);
+    drawWire(ctx, margin, height - margin, width - margin, height - margin);
+    drawBatterySymbol(ctx, width/2, margin, 3);
+    
+    ctx.fillStyle = Colors.text;
+    ctx.font = '14px sans-serif';
+    ctx.fillText(`${emf}V`, width/2, margin + 30);
+
+    if (isType1) {
+        // Type 1: R1 in series with (R2 || R3)
+        drawResistorSymbol(ctx, margin, height/2, { label: 'R₁', value: `${r1}Ω`, scale: 0.9 });
+        
+        // Parallel block
+        const pStartX = width/2 - 50;
+        const pEndX = width - margin;
+        drawWire(ctx, pStartX, height/2 - 40, pEndX, height/2 - 40);
+        drawWire(ctx, pStartX, height/2 + 40, pEndX, height/2 + 40);
+        drawWire(ctx, pStartX, height/2 - 40, pStartX, height/2 + 40);
+        
+        // Break bottom wire to force current through top
+        ctx.fillStyle = Colors.background;
+        ctx.fillRect(pStartX - 5, height - margin - 5, pEndX - pStartX + 10, 10);
+        
+        drawResistorSymbol(ctx, (pStartX + pEndX)/2, height/2 - 40, { label: 'R₂', value: `${r2}Ω`, scale: 0.9 });
+        drawResistorSymbol(ctx, (pStartX + pEndX)/2, height/2 + 40, { label: 'R₃', value: `${r3}Ω`, scale: 0.9 });
+        
+    } else {
+        // Type 2: (R1 || R2) in series with R3
+        // Parallel block
+        const pStartX = margin;
+        const pEndX = width/2 + 50;
+        drawWire(ctx, pStartX, height/2 - 40, pEndX, height/2 - 40);
+        drawWire(ctx, pStartX, height/2 + 40, pEndX, height/2 + 40);
+        drawWire(ctx, pEndX, height/2 - 40, pEndX, height/2 + 40);
+        
+        // Break bottom wire
+        ctx.fillStyle = Colors.background;
+        ctx.fillRect(pStartX - 5, height - margin - 5, pEndX - pStartX + 10, 10);
+        
+        drawResistorSymbol(ctx, (pStartX + pEndX)/2, height/2 - 40, { label: 'R₁', value: `${r1}Ω`, scale: 0.9 });
+        drawResistorSymbol(ctx, (pStartX + pEndX)/2, height/2 + 40, { label: 'R₂', value: `${r2}Ω`, scale: 0.9 });
+        
+        drawResistorSymbol(ctx, width - margin, height/2, { label: 'R₃', value: `${r3}Ω`, scale: 0.9 });
+    }
+}
+
 // ===== SERIES CIRCUIT =====
 
 function drawSeriesCircuit() {
@@ -3213,6 +3351,10 @@ window.drawMCBDiagram = drawMCBDiagram;
 window.drawEarthingDemo = drawEarthingDemo;
 window.showEarthingState = showEarthingState;
 window.drawPlugDiagram = drawPlugDiagram;
+
+window.drawStaticSeriesCircuit = drawStaticSeriesCircuit;
+window.drawStaticParallelCircuit = drawStaticParallelCircuit;
+window.drawCombinedCircuit = drawCombinedCircuit;
 
 // Initialize all drawings when this script loads
 window.initAllCanvasDrawings = function() {
