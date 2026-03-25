@@ -8,8 +8,11 @@ const AppState = { currentSection: 'home', currentSubtopic: null };
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initSubNavigation();
+    initTabs();
     initSliders();
-    setTimeout(() => { initAllCanvasDrawings(); }, 100);
+    initDangerScenarios();
+    initSafetyTabs();
+    setTimeout(() => { initAllCanvasDrawings(); }, 150);
 });
 
 function initNavigation() {
@@ -33,9 +36,55 @@ function initSubNavigation() {
             parentNav.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
             parentSection.querySelectorAll('.subtopic-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById(btn.dataset.subtopic).classList.add('active');
-            initAllCanvasDrawings();
+            
+            const subtopicId = btn.dataset.subtopic;
+            document.getElementById(subtopicId).classList.add('active');
+            initSubtopicContent(subtopicId);
         });
+    });
+}
+
+function initTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            const tabContainer = btn.closest('.tabs-container');
+            tabContainer.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            tabContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) {
+                targetTab.classList.add('active');
+                initTabContent(tabId);
+            }
+        });
+    });
+}
+
+function initDangerScenarios() {
+    document.querySelectorAll('.scenario-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const scenario = btn.dataset.scenario;
+            document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.scenario-info').forEach(info => info.classList.remove('active'));
+            const targetInfo = document.getElementById(scenario + '-info');
+            if (targetInfo) targetInfo.classList.add('active');
+            
+            if(window.drawDangerDemo) window.drawDangerDemo(scenario);
+        });
+    });
+}
+
+function initSafetyTabs() {
+    document.getElementById('earthingNormalBtn')?.addEventListener('click', () => {
+        if(window.drawEarthingDemo) window.drawEarthingDemo('normal');
+    });
+    document.getElementById('earthingFaultBtn')?.addEventListener('click', () => {
+        if(window.drawEarthingDemo) window.drawEarthingDemo('fault');
+    });
+    document.getElementById('earthingResetBtn')?.addEventListener('click', () => {
+        if(window.drawEarthingDemo) window.drawEarthingDemo('normal');
     });
 }
 
@@ -46,12 +95,10 @@ function initSliders() {
         handleSliderChange(slider); // Init value on load
     });
 
-    // Checkboxes for overload calculator
     document.querySelectorAll('.appliance-checkbox input').forEach(cb => {
         cb.addEventListener('change', updateOverload);
     });
     
-    // Config buttons for Combined Circuit
     document.getElementById('configType1')?.addEventListener('click', function() {
         document.getElementById('configType2').classList.remove('active');
         this.classList.add('active');
@@ -63,11 +110,7 @@ function initSliders() {
         updateCombinedCircuit();
     });
 
-    // Animation toggles
-    document.getElementById('toggleCurrentFlow')?.addEventListener('click', function() {
-        if(this.classList.toggle('active')) { this.innerHTML = '<span>⏹️</span> Stop Flow'; window.startCurrentFlowAnimation(); }
-        else { this.innerHTML = '<span>▶️</span> Start Flow'; window.stopCurrentFlowAnimation(); }
-    });
+    // Circuit Animation Binds
     document.getElementById('toggleSeriesAnimation')?.addEventListener('click', function() {
         if(this.classList.toggle('active')) { this.innerHTML = '<span>⏹️</span> Stop Animation'; window.startSeriesAnimation(); }
         else { this.innerHTML = '<span>▶️</span> Start Animation'; window.stopSeriesAnimation(); }
@@ -75,6 +118,10 @@ function initSliders() {
     document.getElementById('toggleParallelAnimation')?.addEventListener('click', function() {
         if(this.classList.toggle('active')) { this.innerHTML = '<span>⏹️</span> Stop Animation'; window.startParallelAnimation(); }
         else { this.innerHTML = '<span>▶️</span> Start Animation'; window.stopParallelAnimation(); }
+    });
+    document.getElementById('toggleCombinedAnimation')?.addEventListener('click', function() {
+        if(this.classList.toggle('active')) { this.innerHTML = '<span>⏹️</span> Stop Animation'; window.startCombinedAnimation(); }
+        else { this.innerHTML = '<span>▶️</span> Start Animation'; window.stopCombinedAnimation(); }
     });
 }
 
@@ -89,7 +136,6 @@ function handleSliderChange(slider) {
     if(slider.id.includes('power')) updatePowerDemo();
     if(slider.id.includes('energy')) updateEnergyDemo();
     if(slider.id.includes('cost')) updateCostCalculator();
-    if(slider.id.includes('voltage') && !slider.id.includes('power')) { if(window.drawCurrentFlowAnimation) window.drawCurrentFlowAnimation(); }
 }
 
 function updateSeriesCircuit() {
@@ -136,11 +182,9 @@ function updateCombinedCircuit() {
     
     let rTotal, rParallel, current;
     if(isType1) {
-        rParallel = (r2 * r3) / (r2 + r3);
-        rTotal = r1 + rParallel;
+        rParallel = (r2 * r3) / (r2 + r3); rTotal = r1 + rParallel;
     } else {
-        rParallel = (r1 * r2) / (r1 + r2);
-        rTotal = r3 + rParallel;
+        rParallel = (r1 * r2) / (r1 + r2); rTotal = r3 + rParallel;
     }
     current = emf / rTotal;
     
@@ -164,7 +208,6 @@ function updatePotentialDivider() {
     safeSet('dividerVout', vout.toFixed(2));
     safeSet('dividerCurrent', (vin / (r1 + r2)).toFixed(2));
     safeSet('dividerRatio', ((vout / vin) * 100).toFixed(0));
-    
     safeSet('calcVin', vin); safeSet('calcR1', r1); safeSet('calcR2', r2); safeSet('calcR2b', r2);
     safeSet('calcVin2', vin); safeSet('calcR2c', r2); safeSet('calcRtotal', (r1 + r2)); safeSet('calcVoutFinal', vout.toFixed(2));
     
@@ -179,7 +222,6 @@ function updatePowerDemo() {
     safeSet('powerCurrentResult', i.toFixed(2));
     safeSet('powerResistanceResult', Math.round(r));
     safeSet('powerWattResult', p);
-    
     safeSet('calcPower1', p); safeSet('calcVoltage1', v); safeSet('calcCurrent1', i.toFixed(2));
     safeSet('calcVoltage2', v); safeSet('calcPower2', p); safeSet('calcResistance1', Math.round(r));
 }
@@ -192,7 +234,6 @@ function updateEnergyDemo() {
     safeSet('energyJoulesResult', (p * t * 3600).toLocaleString());
     safeSet('energyKwhResult', kwh.toFixed(1));
     safeSet('energyUnitsResult', kwh.toFixed(1));
-    
     safeSet('calcEnergyP', p); safeSet('calcEnergyT', t);
     safeSet('calcEnergyP2', (p / 1000).toFixed(1)); safeSet('calcEnergyT2', t);
     safeSet('calcEnergyResult', kwh.toFixed(1));
@@ -203,34 +244,22 @@ function updateCostCalculator() {
     const hours = parseFloat(document.getElementById('costHoursSlider')?.value) || 8;
     const days = parseFloat(document.getElementById('costDaysSlider')?.value) || 30;
     const rate = parseFloat(document.getElementById('costRateSlider')?.value) || 0.32;
+    const dailyEnergy = (power / 1000) * hours; const totalEnergy = dailyEnergy * days; const cost = totalEnergy * rate;
     
-    const dailyEnergy = (power / 1000) * hours;
-    const totalEnergy = dailyEnergy * days;
-    const cost = totalEnergy * rate;
+    safeSet('billPower', power + ' W'); safeSet('billHours', hours + ' hours');
+    safeSet('billDays', days + ' days'); safeSet('billEnergy', totalEnergy.toFixed(0) + ' kWh');
+    safeSet('billRate', '$' + rate.toFixed(2) + '/kWh'); safeSet('billTotal', '$' + cost.toFixed(2));
     
-    safeSet('billPower', power + ' W');
-    safeSet('billHours', hours + ' hours');
-    safeSet('billDays', days + ' days');
-    safeSet('billEnergy', totalEnergy.toFixed(0) + ' kWh');
-    safeSet('billRate', '$' + rate.toFixed(2) + '/kWh');
-    safeSet('billTotal', '$' + cost.toFixed(2));
-    
-    safeSet('breakdownPower', (power / 1000).toFixed(1));
-    safeSet('breakdownHours', hours);
-    safeSet('breakdownDaily', dailyEnergy.toFixed(1));
-    safeSet('breakdownDaily2', dailyEnergy.toFixed(1));
-    safeSet('breakdownDays', days);
-    safeSet('breakdownTotal', totalEnergy.toFixed(0));
-    safeSet('breakdownEnergy', totalEnergy.toFixed(0));
-    safeSet('breakdownRate', rate.toFixed(2));
+    safeSet('breakdownPower', (power / 1000).toFixed(1)); safeSet('breakdownHours', hours);
+    safeSet('breakdownDaily', dailyEnergy.toFixed(1)); safeSet('breakdownDaily2', dailyEnergy.toFixed(1));
+    safeSet('breakdownDays', days); safeSet('breakdownTotal', totalEnergy.toFixed(0));
+    safeSet('breakdownEnergy', totalEnergy.toFixed(0)); safeSet('breakdownRate', rate.toFixed(2));
     safeSet('breakdownCost', cost.toFixed(2));
 }
 
 function updateOverload() {
     let totalCurrent = 0;
-    document.querySelectorAll('.appliance-checkbox input:checked').forEach(cb => {
-        totalCurrent += parseFloat(cb.dataset.current);
-    });
+    document.querySelectorAll('.appliance-checkbox input:checked').forEach(cb => { totalCurrent += parseFloat(cb.dataset.current); });
     
     safeSet('totalCurrentDisplay', totalCurrent.toFixed(2));
     const indicator = document.querySelector('.status-indicator');
@@ -248,9 +277,36 @@ function updateOverload() {
     }
 }
 
-function safeSet(id, value) {
-    const el = document.getElementById(id);
-    if(el) el.textContent = value;
+function safeSet(id, value) { const el = document.getElementById(id); if(el) el.textContent = value; }
+
+function initSubtopicContent(subtopicId) {
+    setTimeout(() => {
+        switch(subtopicId) {
+            case 'series-section': if(window.drawStaticSeriesCircuit) window.drawStaticSeriesCircuit(); if(window.drawSeriesCircuit) window.drawSeriesCircuit(); break;
+            case 'parallel-section': if(window.drawStaticParallelCircuit) window.drawStaticParallelCircuit(); if(window.drawParallelCircuit) window.drawParallelCircuit(); break;
+            case 'combined-section': if(window.drawCombinedCircuit) window.drawCombinedCircuit(); break;
+            case 'divider-section': if(window.drawStaticPotentialDivider) window.drawStaticPotentialDivider(); if(window.drawPotentialDivider) window.drawPotentialDivider(); break;
+            case 'dangers-section': if(window.drawDangerDemo) window.drawDangerDemo('short-circuit'); break;
+            case 'safety-section': 
+                if(window.drawFuseDiagram) window.drawFuseDiagram();
+                if(window.drawMCBDiagram) window.drawMCBDiagram();
+                if(window.drawEarthingDemo) window.drawEarthingDemo();
+                if(window.drawPlugDiagram) window.drawPlugDiagram();
+                if(window.drawSafetySystem) window.drawSafetySystem();
+                break;
+        }
+    }, 50);
+}
+
+function initTabContent(tabId) {
+    setTimeout(() => {
+        switch(tabId) {
+            case 'fuse-tab': if(window.drawFuseDiagram) window.drawFuseDiagram(); break;
+            case 'mcb-tab': if(window.drawMCBDiagram) window.drawMCBDiagram(); break;
+            case 'earth-tab': if(window.drawEarthingDemo) window.drawEarthingDemo('normal'); break;
+            case 'wiring-tab': if(window.drawPlugDiagram) window.drawPlugDiagram(); break;
+        }
+    }, 50);
 }
 
 function initAllCanvasDrawings() {
@@ -259,8 +315,15 @@ function initAllCanvasDrawings() {
     if(window.drawStaticParallelCircuit) window.drawStaticParallelCircuit();
     if(window.drawParallelCircuit) window.drawParallelCircuit();
     if(window.drawCombinedCircuit) window.drawCombinedCircuit();
+    if(window.drawStaticPotentialDivider) window.drawStaticPotentialDivider();
     if(window.drawPotentialDivider) window.drawPotentialDivider();
     if(window.drawSocket) window.drawSocket();
+    if(window.drawDangerDemo) window.drawDangerDemo('short-circuit');
+    if(window.drawFuseDiagram) window.drawFuseDiagram();
+    if(window.drawMCBDiagram) window.drawMCBDiagram();
+    if(window.drawEarthingDemo) window.drawEarthingDemo('normal');
+    if(window.drawPlugDiagram) window.drawPlugDiagram();
+    if(window.drawSafetySystem) window.drawSafetySystem();
 }
 
 window.updateOverload = updateOverload;
