@@ -426,6 +426,20 @@
             <div class="canvas-container">
                 <canvas id="pdDemoCanvas" width="700" height="300"></canvas>
             </div>
+
+            <div class="control-panel">
+                <div class="control-group">
+                    <label class="control-label">
+                        <span>R₃</span>
+                        <span class="control-value"><span id="combinedR3Value">20</span> Ω</span>
+                    </label>
+                    <input type="range" id="combinedR3Slider" min="5" max="30" value="20" step="5">
+                </div>
+
+                <button class="btn btn-primary" id="toggleCombinedAnimation">
+                    <span>▶️</span> Start Animation
+                </button>
+            </div>
             
             <div class="control-panel">
                 <div class="control-group">
