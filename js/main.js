@@ -1,800 +1,130 @@
 // ========================================
 // SINGAPORE O-LEVEL ELECTRICITY APP
-// Main JavaScript - Navigation & Core
+// Main JavaScript - Navigation & Core logic
 // ========================================
 
-// ===== GLOBAL STATE =====
-const AppState = {
-    currentSection: 'home',
-    currentSubtopic: null,
-    progress: {
-        sectionsVisited: new Set(),
-        quizzesCompleted: new Set(),
-        totalSections: 6
-    },
-    animations: {
-        running: new Map()
-    }
-};
+const AppState = { currentSection: 'home', currentSubtopic: null };
 
-// ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('⚡ Electricity Learning App Initialized');
-    
     initNavigation();
     initSubNavigation();
-    initTabs();
     initSliders();
-    initCalculators();
-    initWorkedExamples();
-    initMiniQuizzes();
-    initSensorTabs();
-    initDangerScenarios();
-    initSafetyTabs();
-    initProgressTracking();
-    initTooltips();
-    initScrollEffects();
-    
-    loadProgress();
-    
-    setTimeout(() => {
-        initAllCanvasDrawings();
-    }, 100);
+    setTimeout(() => { initAllCanvasDrawings(); }, 100);
 });
 
-// ===== NAVIGATION =====
 function initNavigation() {
-    const navButtons = document.querySelectorAll('.nav-btn');
-    
-    navButtons.forEach(btn => {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const section = btn.dataset.section;
-            navigateTo(section);
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.section).classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            initAllCanvasDrawings();
         });
     });
 }
 
-function navigateTo(sectionId) {
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.section === sectionId) btn.classList.add('active');
-    });
-    
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.remove('active');
-    });
-    
-    const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.add('active');
-        AppState.currentSection = sectionId;
-        
-        AppState.progress.sectionsVisited.add(sectionId);
-        updateProgressBar();
-        saveProgress();
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        initSectionContent(sectionId);
-    }
-}
-
-function initSectionContent(sectionId) {
-    switch(sectionId) {
-        case 'current': initCurrentElectricityCanvases(); break;
-        case 'circuits': initDCCircuitsCanvases(); break;
-        case 'practical': initPracticalElectricityCanvases(); break;
-        case 'simulator': break;
-        case 'quiz': initQuizSection(); break;
-    }
-}
-
-// ===== SUB-NAVIGATION =====
 function initSubNavigation() {
-    const subNavButtons = document.querySelectorAll('.sub-nav-btn');
-    
-    subNavButtons.forEach(btn => {
+    document.querySelectorAll('.sub-nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const subtopic = btn.dataset.subtopic;
             const parentNav = btn.closest('.sub-nav');
             const parentSection = btn.closest('.content-section');
-            
             parentNav.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
+            parentSection.querySelectorAll('.subtopic-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
-            
-            parentSection.querySelectorAll('.subtopic-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            const targetSubtopic = document.getElementById(subtopic);
-            if (targetSubtopic) {
-                targetSubtopic.classList.add('active');
-                AppState.currentSubtopic = subtopic;
-                initSubtopicContent(subtopic);
-            }
+            document.getElementById(btn.dataset.subtopic).classList.add('active');
+            initAllCanvasDrawings();
         });
     });
 }
 
-function initSubtopicContent(subtopicId) {
-    setTimeout(() => {
-        switch(subtopicId) {
-            case 'current-intro': drawCurrentFlowAnimation(); drawAmmeterCircuit(); break;
-            case 'pd-section': drawWaterAnalogy(); drawVoltmeterCircuit(); break;
-            case 'emf-section': drawEMFDemo(); drawCellsSeriesCircuit(); break;
-            case 'resistance-section': drawVIRTriangle(); drawOhmsLawDemo(); drawWireResistanceDemo(); break;
-            case 'nonohmic-section': initNonOhmicGraphs(); break;
-            case 'series-section': drawStaticSeriesCircuit(); drawSeriesCircuit(); break;
-            case 'parallel-section': drawStaticParallelCircuit(); drawParallelCircuit(); break;
-            case 'combined-section': drawCombinedCircuit(); break;
-            case 'divider-section': drawPotentialDivider(); break;
-            case 'power-section': drawPowerTriangles(); break;
-            case 'dangers-section': drawDangerDemo(); break;
-            case 'safety-section': drawSafetyDiagrams(); break;
-        }
-    }, 50);
-}
-
-// ===== TABS =====
-function initTabs() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tabId = btn.dataset.tab;
-            const tabContainer = btn.closest('.tabs-container');
-            
-            tabContainer.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            tabContainer.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            const targetTab = document.getElementById(tabId);
-            if (targetTab) {
-                targetTab.classList.add('active');
-                initTabContent(tabId);
-            }
-        });
-    });
-}
-
-function initTabContent(tabId) {
-    setTimeout(() => {
-        switch(tabId) {
-            case 'filament-tab': drawFilamentIVGraph(); break;
-            case 'diode-tab': drawDiodeIVGraph(); break;
-            case 'thermistor-tab': drawThermistorGraph(); break;
-            case 'ldr-tab': drawLDRGraph(); break;
-            case 'compare-tab': drawCompareAllGraph(); break;
-            case 'fuse-tab': drawFuseDiagram(); break;
-            case 'mcb-tab': drawMCBDiagram(); break;
-            case 'earth-tab': drawEarthingDemo(); break;
-            case 'wiring-tab': drawPlugDiagram(); break;
-        }
-    }, 50);
-}
-
-// ===== SENSOR TABS (for Potential Divider section) =====
-function initSensorTabs() {
-    const sensorTabButtons = document.querySelectorAll('.sensor-tab-btn');
-    
-    sensorTabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const sensor = btn.dataset.sensor;
-            
-            document.querySelectorAll('.sensor-tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            document.querySelectorAll('.sensor-tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            const targetContent = document.getElementById(sensor + '-sensor');
-            if (targetContent) targetContent.classList.add('active');
-        });
-    });
-}
-
-// ===== DANGER SCENARIOS =====
-function initDangerScenarios() {
-    const scenarioButtons = document.querySelectorAll('.scenario-btn');
-    
-    scenarioButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const scenario = btn.dataset.scenario;
-            
-            document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            document.querySelectorAll('.scenario-info').forEach(info => {
-                info.classList.remove('active');
-            });
-            
-            const targetInfo = document.getElementById(scenario + '-info');
-            if (targetInfo) targetInfo.classList.add('active');
-            
-            updateDangerDemo(scenario);
-        });
-    });
-}
-
-// ===== SAFETY TABS =====
-function initSafetyTabs() {
-    document.getElementById('earthingNormalBtn')?.addEventListener('click', () => showEarthingState('normal'));
-    document.getElementById('earthingFaultBtn')?.addEventListener('click', () => showEarthingState('fault'));
-    document.getElementById('earthingResetBtn')?.addEventListener('click', () => showEarthingState('reset'));
-}
-
-// ===== SLIDERS =====
 function initSliders() {
     const sliders = document.querySelectorAll('input[type="range"]');
-    
     sliders.forEach(slider => {
         slider.addEventListener('input', (e) => handleSliderChange(e.target));
-        handleSliderChange(slider);
+        handleSliderChange(slider); // Init value on load
+    });
+
+    // Checkboxes for overload calculator
+    document.querySelectorAll('.appliance-checkbox input').forEach(cb => {
+        cb.addEventListener('change', updateOverload);
+    });
+    
+    // Config buttons for Combined Circuit
+    document.getElementById('configType1')?.addEventListener('click', function() {
+        document.getElementById('configType2').classList.remove('active');
+        this.classList.add('active');
+        updateCombinedCircuit();
+    });
+    document.getElementById('configType2')?.addEventListener('click', function() {
+        document.getElementById('configType1').classList.remove('active');
+        this.classList.add('active');
+        updateCombinedCircuit();
+    });
+
+    // Animation toggles
+    document.getElementById('toggleCurrentFlow')?.addEventListener('click', function() {
+        if(this.classList.toggle('active')) { this.innerHTML = '<span>⏹️</span> Stop Flow'; window.startCurrentFlowAnimation(); }
+        else { this.innerHTML = '<span>▶️</span> Start Flow'; window.stopCurrentFlowAnimation(); }
+    });
+    document.getElementById('toggleSeriesAnimation')?.addEventListener('click', function() {
+        if(this.classList.toggle('active')) { this.innerHTML = '<span>⏹️</span> Stop Animation'; window.startSeriesAnimation(); }
+        else { this.innerHTML = '<span>▶️</span> Start Animation'; window.stopSeriesAnimation(); }
+    });
+    document.getElementById('toggleParallelAnimation')?.addEventListener('click', function() {
+        if(this.classList.toggle('active')) { this.innerHTML = '<span>⏹️</span> Stop Animation'; window.startParallelAnimation(); }
+        else { this.innerHTML = '<span>▶️</span> Start Animation'; window.stopParallelAnimation(); }
     });
 }
 
 function handleSliderChange(slider) {
-    const id = slider.id;
-    const value = parseFloat(slider.value);
-    
-    const valueDisplayId = id.replace('Slider', 'Value');
-    const valueDisplay = document.getElementById(valueDisplayId);
-    if (valueDisplay) valueDisplay.textContent = value;
-    
-    switch(id) {
-        case 'voltageSlider':
-        case 'resistanceSlider1':
-            updateCurrentFlowDemo();
-            break;
-        case 'workDoneSlider':
-        case 'chargeSlider2':
-            updatePDDemo();
-            break;
-        case 'emfSlider':
-        case 'cellSlider':
-            updateEMFDemo();
-            break;
-        case 'ohmVoltageSlider':
-        case 'ohmResistanceSlider':
-            updateOhmsLawDemo();
-            break;
-        case 'wireLengthSlider':
-        case 'wireThicknessSlider':
-            updateWireResistanceDemo();
-            break;
-        case 'filamentVoltageSlider':
-            updateFilamentGraph();
-            break;
-        case 'diodeVoltageSlider':
-            updateDiodeGraph();
-            break;
-        case 'thermistorTempSlider':
-            updateThermistorGraph();
-            break;
-        case 'ldrIntensitySlider':
-            updateLDRGraph();
-            break;
-        case 'seriesEmfSlider':
-        case 'seriesR1Slider':
-        case 'seriesR2Slider':
-            updateSeriesCircuit();
-            break;
-        case 'parallelEmfSlider':
-        case 'parallelR1Slider':
-        case 'parallelR2Slider':
-            updateParallelCircuit();
-            break;
-        case 'combinedEmfSlider':
-        case 'combinedR1Slider':
-        case 'combinedR2Slider':
-        case 'combinedR3Slider':
-            updateCombinedCircuit();
-            break;
-        case 'dividerVinSlider':
-        case 'dividerR1Slider':
-        case 'dividerR2Slider':
-            updatePotentialDivider();
-            break;
-        case 'thermistorTempSlider2':
-            updateThermistorDivider();
-            break;
-        case 'ldrLightSlider2':
-            updateLDRDivider();
-            break;
-        case 'powerVoltageSlider':
-        case 'powerWattSlider':
-            updatePowerDemo();
-            break;
-        case 'energyPowerSlider':
-        case 'energyTimeSlider':
-            updateEnergyDemo();
-            break;
-        case 'costPowerSlider':
-        case 'costHoursSlider':
-        case 'costDaysSlider':
-        case 'costRateSlider':
-            updateCostCalculator();
-            break;
-        case 'fusePowerSlider':
-        case 'fuseVoltageSlider':
-            updateFuseCalculator();
-            break;
-    }
-}
+    const valueDisplay = document.getElementById(slider.id.replace('Slider', 'Value'));
+    if (valueDisplay) valueDisplay.textContent = slider.value;
 
-// ===== CALCULATOR FUNCTIONS =====
-function initCalculators() {
-    const formulaButtons = document.querySelectorAll('.formula-btn');
-    formulaButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const formula = btn.dataset.formula;
-            
-            document.querySelectorAll('.formula-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            document.querySelectorAll('.calc-inputs-group').forEach(group => {
-                group.classList.remove('active');
-            });
-            
-            const targetGroup = document.getElementById(formula + '-inputs');
-            if (targetGroup) targetGroup.classList.add('active');
-        });
-    });
-    
-    const quickSelectButtons = document.querySelectorAll('.quick-select-btn');
-    quickSelectButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const power = btn.dataset.power;
-            
-            document.querySelectorAll('.quick-select-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            const powerSlider = document.getElementById('energyPowerSlider');
-            if (powerSlider) {
-                powerSlider.value = power;
-                handleSliderChange(powerSlider);
-            }
-        });
-    });
-}
-
-function calculateCurrent() {
-    const current = parseFloat(document.getElementById('calcCurrent')?.value);
-    const charge = parseFloat(document.getElementById('calcCharge')?.value);
-    const time = parseFloat(document.getElementById('calcTime')?.value);
-    const resultDiv = document.getElementById('currentCalcResult');
-    
-    let result = '';
-    
-    if (!isNaN(charge) && !isNaN(time) && isNaN(current)) {
-        const calcCurrent = charge / time;
-        result = `<span class="calc-success">I = Q / t = ${charge} / ${time} = <strong>${calcCurrent.toFixed(3)} A</strong></span>`;
-        document.getElementById('calcCurrent').value = calcCurrent.toFixed(3);
-    } else if (!isNaN(current) && !isNaN(time) && isNaN(charge)) {
-        const calcCharge = current * time;
-        result = `<span class="calc-success">Q = I × t = ${current} × ${time} = <strong>${calcCharge.toFixed(2)} C</strong></span>`;
-        document.getElementById('calcCharge').value = calcCharge.toFixed(2);
-    } else if (!isNaN(current) && !isNaN(charge) && isNaN(time)) {
-        const calcTime = charge / current;
-        result = `<span class="calc-success">t = Q / I = ${charge} / ${current} = <strong>${calcTime.toFixed(2)} s</strong></span>`;
-        document.getElementById('calcTime').value = calcTime.toFixed(2);
-    } else {
-        result = '<span class="calc-error">Please enter exactly two values to calculate the third.</span>';
-    }
-    
-    if (resultDiv) resultDiv.innerHTML = result;
-}
-
-function calculatePD() {
-    const voltage = parseFloat(document.getElementById('calcVoltage')?.value);
-    const work = parseFloat(document.getElementById('calcWork')?.value);
-    const charge = parseFloat(document.getElementById('calcCharge2')?.value);
-    const resultDiv = document.getElementById('pdCalcResult');
-    
-    let result = '';
-    
-    if (!isNaN(work) && !isNaN(charge) && isNaN(voltage)) {
-        const calcVoltage = work / charge;
-        result = `<span class="calc-success">V = W / Q = ${work} / ${charge} = <strong>${calcVoltage.toFixed(2)} V</strong></span>`;
-        document.getElementById('calcVoltage').value = calcVoltage.toFixed(2);
-    } else if (!isNaN(voltage) && !isNaN(charge) && isNaN(work)) {
-        const calcWork = voltage * charge;
-        result = `<span class="calc-success">W = V × Q = ${voltage} × ${charge} = <strong>${calcWork.toFixed(2)} J</strong></span>`;
-        document.getElementById('calcWork').value = calcWork.toFixed(2);
-    } else if (!isNaN(voltage) && !isNaN(work) && isNaN(charge)) {
-        const calcCharge = work / voltage;
-        result = `<span class="calc-success">Q = W / V = ${work} / ${voltage} = <strong>${calcCharge.toFixed(2)} C</strong></span>`;
-        document.getElementById('calcCharge2').value = calcCharge.toFixed(2);
-    } else {
-        result = '<span class="calc-error">Please enter exactly two values to calculate the third.</span>';
-    }
-    
-    if (resultDiv) resultDiv.innerHTML = result;
-}
-
-function calculateOhmsLaw() {
-    const voltage = parseFloat(document.getElementById('calcOhmV')?.value);
-    const current = parseFloat(document.getElementById('calcOhmI')?.value);
-    const resistance = parseFloat(document.getElementById('calcOhmR')?.value);
-    const resultDiv = document.getElementById('ohmCalcResult');
-    
-    let result = '';
-    
-    if (!isNaN(current) && !isNaN(resistance) && isNaN(voltage)) {
-        const calcVoltage = current * resistance;
-        result = `<span class="calc-success">V = I × R = ${current} × ${resistance} = <strong>${calcVoltage.toFixed(2)} V</strong></span>`;
-        document.getElementById('calcOhmV').value = calcVoltage.toFixed(2);
-    } else if (!isNaN(voltage) && !isNaN(resistance) && isNaN(current)) {
-        const calcCurrent = voltage / resistance;
-        result = `<span class="calc-success">I = V / R = ${voltage} / ${resistance} = <strong>${calcCurrent.toFixed(3)} A</strong></span>`;
-        document.getElementById('calcOhmI').value = calcCurrent.toFixed(3);
-    } else if (!isNaN(voltage) && !isNaN(current) && isNaN(resistance)) {
-        const calcResistance = voltage / current;
-        result = `<span class="calc-success">R = V / I = ${voltage} / ${current} = <strong>${calcResistance.toFixed(2)} Ω</strong></span>`;
-        document.getElementById('calcOhmR').value = calcResistance.toFixed(2);
-    } else {
-        result = '<span class="calc-error">Please enter exactly two values to calculate the third.</span>';
-    }
-    
-    if (resultDiv) resultDiv.innerHTML = result;
-}
-
-function calculatePower() {
-    const activeFormula = document.querySelector('.formula-btn.active')?.dataset.formula || 'pvi';
-    const resultDiv = document.getElementById('powerCalcResult');
-    let result = '';
-    let power = 0;
-    
-    switch(activeFormula) {
-        case 'pvi':
-            const v1 = parseFloat(document.getElementById('calcPviV')?.value);
-            const i1 = parseFloat(document.getElementById('calcPviI')?.value);
-            if (!isNaN(v1) && !isNaN(i1)) {
-                power = v1 * i1;
-                result = `<span class="calc-success">P = V × I = ${v1} × ${i1} = <strong>${power.toFixed(2)} W</strong></span>`;
-            } else {
-                result = '<span class="calc-error">Please enter both voltage and current.</span>';
-            }
-            break;
-            
-        case 'pir':
-            const i2 = parseFloat(document.getElementById('calcPirI')?.value);
-            const r1 = parseFloat(document.getElementById('calcPirR')?.value);
-            if (!isNaN(i2) && !isNaN(r1)) {
-                power = i2 * i2 * r1;
-                result = `<span class="calc-success">P = I²R = ${i2}² × ${r1} = <strong>${power.toFixed(2)} W</strong></span>`;
-            } else {
-                result = '<span class="calc-error">Please enter both current and resistance.</span>';
-            }
-            break;
-            
-        case 'pvr':
-            const v2 = parseFloat(document.getElementById('calcPvrV')?.value);
-            const r2 = parseFloat(document.getElementById('calcPvrR')?.value);
-            if (!isNaN(v2) && !isNaN(r2)) {
-                power = (v2 * v2) / r2;
-                result = `<span class="calc-success">P = V²/R = ${v2}² / ${r2} = <strong>${power.toFixed(2)} W</strong></span>`;
-            } else {
-                result = '<span class="calc-error">Please enter both voltage and resistance.</span>';
-            }
-            break;
-    }
-    
-    if (resultDiv) resultDiv.innerHTML = result;
-}
-
-function calculateDivider() {
-    const vin = parseFloat(document.getElementById('calcDividerVin')?.value);
-    const vout = parseFloat(document.getElementById('calcDividerVout')?.value);
-    const r1 = parseFloat(document.getElementById('calcDividerR1')?.value);
-    const r2 = parseFloat(document.getElementById('calcDividerR2')?.value);
-    const resultDiv = document.getElementById('dividerCalcResult');
-    
-    let result = '';
-    let filledCount = [vin, vout, r1, r2].filter(v => !isNaN(v)).length;
-    
-    if (filledCount !== 3) {
-        result = '<span class="calc-error">Please enter exactly three values to calculate the fourth.</span>';
-    } else if (isNaN(vout)) {
-        const calcVout = vin * r2 / (r1 + r2);
-        result = `<span class="calc-success">V<sub>out</sub> = V<sub>in</sub> × R₂ / (R₁ + R₂) = ${vin} × ${r2} / (${r1} + ${r2}) = <strong>${calcVout.toFixed(2)} V</strong></span>`;
-        document.getElementById('calcDividerVout').value = calcVout.toFixed(2);
-    } else if (isNaN(vin)) {
-        const calcVin = vout * (r1 + r2) / r2;
-        result = `<span class="calc-success">V<sub>in</sub> = V<sub>out</sub> × (R₁ + R₂) / R₂ = ${vout} × (${r1} + ${r2}) / ${r2} = <strong>${calcVin.toFixed(2)} V</strong></span>`;
-        document.getElementById('calcDividerVin').value = calcVin.toFixed(2);
-    } else if (isNaN(r1)) {
-        const calcR1 = r2 * (vin - vout) / vout;
-        result = `<span class="calc-success">R₁ = R₂ × (V<sub>in</sub> - V<sub>out</sub>) / V<sub>out</sub> = ${r2} × (${vin} - ${vout}) / ${vout} = <strong>${calcR1.toFixed(2)} kΩ</strong></span>`;
-        document.getElementById('calcDividerR1').value = calcR1.toFixed(2);
-    } else if (isNaN(r2)) {
-        const calcR2 = r1 * vout / (vin - vout);
-        result = `<span class="calc-success">R₂ = R₁ × V<sub>out</sub> / (V<sub>in</sub> - V<sub>out</sub>) = ${r1} × ${vout} / (${vin} - ${vout}) = <strong>${calcR2.toFixed(2)} kΩ</strong></span>`;
-        document.getElementById('calcDividerR2').value = calcR2.toFixed(2);
-    }
-    
-    if (resultDiv) resultDiv.innerHTML = result;
-}
-
-function clearCalculator(type) {
-    switch(type) {
-        case 'current':
-            document.getElementById('calcCurrent').value = '';
-            document.getElementById('calcCharge').value = '';
-            document.getElementById('calcTime').value = '';
-            document.getElementById('currentCalcResult').innerHTML = '';
-            break;
-        case 'pd':
-            document.getElementById('calcVoltage').value = '';
-            document.getElementById('calcWork').value = '';
-            document.getElementById('calcCharge2').value = '';
-            document.getElementById('pdCalcResult').innerHTML = '';
-            break;
-        case 'ohm':
-            document.getElementById('calcOhmV').value = '';
-            document.getElementById('calcOhmI').value = '';
-            document.getElementById('calcOhmR').value = '';
-            document.getElementById('ohmCalcResult').innerHTML = '';
-            break;
-        case 'power':
-            document.querySelectorAll('.calc-inputs-group input').forEach(input => input.value = '');
-            document.getElementById('powerCalcResult').innerHTML = '';
-            break;
-        case 'divider':
-            document.getElementById('calcDividerVin').value = '';
-            document.getElementById('calcDividerVout').value = '';
-            document.getElementById('calcDividerR1').value = '';
-            document.getElementById('calcDividerR2').value = '';
-            document.getElementById('dividerCalcResult').innerHTML = '';
-            break;
-    }
-}
-
-// ===== WORKED EXAMPLES =====
-function initWorkedExamples() {}
-
-function revealSolution(exampleId) {
-    const solutionDiv = document.getElementById(exampleId + 'Solution');
-    if (solutionDiv) {
-        const content = solutionDiv.querySelector('.solution-content');
-        const btn = solutionDiv.querySelector('.reveal-btn');
-        
-        if (content && btn) {
-            content.classList.toggle('hidden');
-            
-            if (content.classList.contains('hidden')) {
-                btn.innerHTML = '<span>👁️</span> Reveal Solution';
-            } else {
-                btn.innerHTML = '<span>🙈</span> Hide Solution';
-            }
-        }
-    }
-}
-
-function toggleHint(hintId) {
-    const hintContent = document.getElementById(hintId);
-    if (hintContent) hintContent.classList.toggle('hidden');
-}
-
-// ===== MINI QUIZZES =====
-function initMiniQuizzes() {
-    const quizOptions = document.querySelectorAll('.quiz-option');
-    quizOptions.forEach(option => {
-        option.addEventListener('click', () => handleQuizAnswer(option));
-    });
-}
-
-function handleQuizAnswer(selectedOption) {
-    const questionDiv = selectedOption.closest('.quiz-question');
-    const feedbackDiv = questionDiv.querySelector('.quiz-feedback');
-    const allOptions = questionDiv.querySelectorAll('.quiz-option');
-    
-    allOptions.forEach(opt => {
-        opt.disabled = true;
-        opt.style.pointerEvents = 'none';
-    });
-    
-    const isCorrect = selectedOption.dataset.correct === 'true';
-    
-    if (isCorrect) {
-        selectedOption.classList.add('correct');
-        feedbackDiv.innerHTML = '<span style="color: var(--secondary-green);">✅ Correct! Well done!</span>';
-        feedbackDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-    } else {
-        selectedOption.classList.add('incorrect');
-        allOptions.forEach(opt => {
-            if (opt.dataset.correct === 'true') opt.classList.add('correct');
-        });
-        feedbackDiv.innerHTML = '<span style="color: var(--secondary-red);">❌ Not quite. The correct answer is highlighted.</span>';
-        feedbackDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-    }
-    
-    feedbackDiv.style.padding = '10px';
-    feedbackDiv.style.borderRadius = '8px';
-    feedbackDiv.style.marginTop = '10px';
-}
-
-// ===== PROGRESS TRACKING =====
-function initProgressTracking() {
-    updateProgressBar();
-}
-
-function updateProgressBar() {
-    const visited = AppState.progress.sectionsVisited.size;
-    const total = AppState.progress.totalSections;
-    const percentage = Math.round((visited / total) * 100);
-    
-    const progressBar = document.getElementById('progressBar');
-    const progressPercent = document.getElementById('progressPercent');
-    
-    if (progressBar) progressBar.style.setProperty('--progress', percentage + '%');
-    if (progressPercent) progressPercent.textContent = percentage;
-}
-
-function saveProgress() {
-    const progressData = {
-        sectionsVisited: Array.from(AppState.progress.sectionsVisited),
-        quizzesCompleted: Array.from(AppState.progress.quizzesCompleted),
-        lastSection: AppState.currentSection
-    };
-    localStorage.setItem('electricityAppProgress', JSON.stringify(progressData));
-}
-
-function loadProgress() {
-    const savedData = localStorage.getItem('electricityAppProgress');
-    if (savedData) {
-        try {
-            const data = JSON.parse(savedData);
-            AppState.progress.sectionsVisited = new Set(data.sectionsVisited || []);
-            AppState.progress.quizzesCompleted = new Set(data.quizzesCompleted || []);
-            updateProgressBar();
-        } catch (e) {
-            console.error('Error loading progress:', e);
-        }
-    }
-}
-
-// ===== TOOLTIPS =====
-function initTooltips() {}
-
-// ===== SCROLL EFFECTS =====
-function initScrollEffects() {
-    const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('animate-slide');
-            }
-        });
-    }, observerOptions);
-    
-    document.querySelectorAll('.lesson-container, .concept-box, .demo-area').forEach(el => {
-        observer.observe(el);
-    });
-}
-
-// ===== UPDATE FUNCTIONS FOR DEMOS =====
-function updateCurrentFlowDemo() {
-    const voltage = parseFloat(document.getElementById('voltageSlider')?.value) || 6;
-    const resistance = parseFloat(document.getElementById('resistanceSlider1')?.value) || 10;
-    const current = voltage / resistance;
-    
-    const currentDisplay = document.getElementById('currentDisplay');
-    const chargeDisplay = document.getElementById('chargeDisplay');
-    const speedDisplay = document.getElementById('speedDisplay');
-    
-    if (currentDisplay) currentDisplay.textContent = current.toFixed(2);
-    if (chargeDisplay) chargeDisplay.textContent = current.toFixed(2);
-    
-    if (speedDisplay) {
-        if (current < 0.3) speedDisplay.textContent = 'Slow';
-        else if (current < 0.6) speedDisplay.textContent = 'Normal';
-        else if (current < 1) speedDisplay.textContent = 'Fast';
-        else speedDisplay.textContent = 'Very Fast';
-    }
-    drawCurrentFlowAnimation();
-}
-
-function updatePDDemo() {
-    const work = parseFloat(document.getElementById('workDoneSlider')?.value) || 12;
-    const charge = parseFloat(document.getElementById('chargeSlider2')?.value) || 4;
-    const pd = work / charge;
-    
-    document.getElementById('workDisplay').textContent = work;
-    document.getElementById('chargeDisplay2').textContent = charge;
-    document.getElementById('pdDisplay').textContent = pd.toFixed(2);
-}
-
-function updateEMFDemo() {
-    const emf = parseFloat(document.getElementById('emfSlider')?.value) || 12;
-    const cells = parseFloat(document.getElementById('cellSlider')?.value) || 4;
-    const emfPerCell = emf / cells;
-    
-    document.getElementById('totalEmfDisplay').textContent = emf;
-    document.getElementById('emfPerCellDisplay').textContent = emfPerCell.toFixed(2);
-}
-
-function updateOhmsLawDemo() {
-    const voltage = parseFloat(document.getElementById('ohmVoltageSlider')?.value) || 6;
-    const resistance = parseFloat(document.getElementById('ohmResistanceSlider')?.value) || 10;
-    const current = voltage / resistance;
-    
-    document.getElementById('ohmVDisplay').textContent = voltage.toFixed(1);
-    document.getElementById('ohmRDisplay').textContent = resistance;
-    document.getElementById('ohmIDisplay').textContent = current.toFixed(2);
-    drawOhmsLawDemo();
-}
-
-function updateWireResistanceDemo() {
-    const length = parseFloat(document.getElementById('wireLengthSlider')?.value) || 1;
-    const thicknessLevel = parseInt(document.getElementById('wireThicknessSlider')?.value) || 2;
-    const material = document.getElementById('wireMaterialSelect')?.value || 'copper';
-    
-    const thicknessLabels = ['Thin', 'Medium', 'Thick'];
-    document.getElementById('wireThicknessValue').textContent = thicknessLabels[thicknessLevel - 1];
-    
-    const areas = [0.5, 1.0, 2.0];
-    const area = areas[thicknessLevel - 1];
-    
-    const resistivities = { 'copper': 1.7e-8, 'aluminium': 2.8e-8, 'nichrome': 1.1e-6 };
-    const rho = resistivities[material];
-    const resistance = (rho * length) / (area * 1e-6); 
-    
-    document.getElementById('wireLDisplay').textContent = length.toFixed(1);
-    document.getElementById('wireADisplay').textContent = area.toFixed(1);
-    document.getElementById('wireRhoDisplay').textContent = rho.toExponential(1);
-    document.getElementById('wireRDisplay').textContent = resistance.toFixed(4);
-    
-    drawWireResistanceDemo();
+    if(slider.id.includes('series')) updateSeriesCircuit();
+    if(slider.id.includes('parallel')) updateParallelCircuit();
+    if(slider.id.includes('combined')) updateCombinedCircuit();
+    if(slider.id.includes('divider')) updatePotentialDivider();
+    if(slider.id.includes('power')) updatePowerDemo();
+    if(slider.id.includes('energy')) updateEnergyDemo();
+    if(slider.id.includes('cost')) updateCostCalculator();
+    if(slider.id.includes('voltage') && !slider.id.includes('power')) { if(window.drawCurrentFlowAnimation) window.drawCurrentFlowAnimation(); }
 }
 
 function updateSeriesCircuit() {
     const emf = parseFloat(document.getElementById('seriesEmfSlider')?.value) || 12;
     const r1 = parseFloat(document.getElementById('seriesR1Slider')?.value) || 10;
     const r2 = parseFloat(document.getElementById('seriesR2Slider')?.value) || 20;
+    const current = emf / (r1 + r2);
     
-    const totalR = r1 + r2;
-    const current = emf / totalR;
-    const v1 = current * r1;
-    const v2 = current * r2;
+    safeSet('seriesTotalR', (r1 + r2));
+    safeSet('seriesCurrent', current.toFixed(2));
+    safeSet('seriesV1', (current * r1).toFixed(1));
+    safeSet('seriesV2', (current * r2).toFixed(1));
+    safeSet('verifyV1', (current * r1).toFixed(1));
+    safeSet('verifyV2', (current * r2).toFixed(1));
+    safeSet('verifyTotal', emf.toFixed(1));
     
-    document.getElementById('seriesTotalR').textContent = totalR;
-    document.getElementById('seriesCurrent').textContent = current.toFixed(2);
-    document.getElementById('seriesV1').textContent = v1.toFixed(1);
-    document.getElementById('seriesV2').textContent = v2.toFixed(1);
-    
-    document.getElementById('verifyV1').textContent = v1.toFixed(1);
-    document.getElementById('verifyV2').textContent = v2.toFixed(1);
-    document.getElementById('verifyTotal').textContent = (v1 + v2).toFixed(1);
-    
-    if (typeof drawSeriesCircuit === 'function') drawSeriesCircuit();
+    if(window.drawSeriesCircuit) window.drawSeriesCircuit();
 }
 
 function updateParallelCircuit() {
     const emf = parseFloat(document.getElementById('parallelEmfSlider')?.value) || 12;
     const r1 = parseFloat(document.getElementById('parallelR1Slider')?.value) || 20;
     const r2 = parseFloat(document.getElementById('parallelR2Slider')?.value) || 30;
+    const i1 = emf / r1; const i2 = emf / r2; const totalR = (r1 * r2) / (r1 + r2);
     
-    const totalR = (r1 * r2) / (r1 + r2);
-    const i1 = emf / r1;
-    const i2 = emf / r2;
-    const totalI = i1 + i2;
+    safeSet('parallelV', emf);
+    safeSet('parallelI1', i1.toFixed(2));
+    safeSet('parallelI2', i2.toFixed(2));
+    safeSet('parallelTotalI', (i1 + i2).toFixed(2));
+    safeSet('parallelTotalR', totalR.toFixed(1));
+    safeSet('verifyI1', i1.toFixed(2));
+    safeSet('verifyI2', i2.toFixed(2));
+    safeSet('verifyTotalI', (i1 + i2).toFixed(2));
     
-    document.getElementById('parallelV').textContent = emf;
-    document.getElementById('parallelI1').textContent = i1.toFixed(2);
-    document.getElementById('parallelI2').textContent = i2.toFixed(2);
-    document.getElementById('parallelTotalI').textContent = totalI.toFixed(2);
-    document.getElementById('parallelTotalR').textContent = totalR.toFixed(1);
-    
-    document.getElementById('verifyI1').textContent = i1.toFixed(2);
-    document.getElementById('verifyI2').textContent = i2.toFixed(2);
-    document.getElementById('verifyTotalI').textContent = totalI.toFixed(2);
-    
-    if (typeof drawParallelCircuit === 'function') drawParallelCircuit();
+    if(window.drawParallelCircuit) window.drawParallelCircuit();
 }
 
 function updateCombinedCircuit() {
@@ -802,111 +132,70 @@ function updateCombinedCircuit() {
     const r1 = parseFloat(document.getElementById('combinedR1Slider')?.value) || 10;
     const r2 = parseFloat(document.getElementById('combinedR2Slider')?.value) || 20;
     const r3 = parseFloat(document.getElementById('combinedR3Slider')?.value) || 20;
+    const isType1 = document.getElementById('configType1')?.classList.contains('active');
     
-    const rParallel = (r2 * r3) / (r2 + r3);
-    const rTotal = r1 + rParallel;
-    const current = emf / rTotal;
+    let rTotal, rParallel, current;
+    if(isType1) {
+        rParallel = (r2 * r3) / (r2 + r3);
+        rTotal = r1 + rParallel;
+    } else {
+        rParallel = (r1 * r2) / (r1 + r2);
+        rTotal = r3 + rParallel;
+    }
+    current = emf / rTotal;
     
-    document.getElementById('combinedRParallel').textContent = rParallel.toFixed(1);
-    document.getElementById('combinedRTotal').textContent = rTotal.toFixed(1);
-    document.getElementById('combinedITotal').textContent = current.toFixed(2);
+    safeSet('combinedRParallel', rParallel.toFixed(1));
+    safeSet('combinedRTotal', rTotal.toFixed(1));
+    safeSet('combinedITotal', current.toFixed(2));
+    safeSet('stepParallelR', rParallel.toFixed(1));
+    safeSet('stepTotalR', rTotal.toFixed(1));
+    safeSet('stepTotalI', current.toFixed(2));
     
-    document.getElementById('stepParallelR').textContent = rParallel.toFixed(1);
-    document.getElementById('stepTotalR').textContent = rTotal.toFixed(1);
-    document.getElementById('stepTotalI').textContent = current.toFixed(2);
-    
-    if (typeof drawCombinedCircuit === 'function') drawCombinedCircuit();
+    if(window.drawCombinedCircuit) window.drawCombinedCircuit();
 }
 
 function updatePotentialDivider() {
     const vin = parseFloat(document.getElementById('dividerVinSlider')?.value) || 12;
     const r1 = parseFloat(document.getElementById('dividerR1Slider')?.value) || 10;
     const r2 = parseFloat(document.getElementById('dividerR2Slider')?.value) || 10;
-    
     const vout = vin * r2 / (r1 + r2);
-    const vr1 = vin * r1 / (r1 + r2);
-    const current = vin / (r1 + r2); 
-    const ratio = (vout / vin) * 100;
     
-    document.getElementById('dividerVR1').textContent = vr1.toFixed(2);
-    document.getElementById('dividerVout').textContent = vout.toFixed(2);
-    document.getElementById('dividerCurrent').textContent = current.toFixed(2);
-    document.getElementById('dividerRatio').textContent = ratio.toFixed(0);
+    safeSet('dividerVR1', (vin - vout).toFixed(2));
+    safeSet('dividerVout', vout.toFixed(2));
+    safeSet('dividerCurrent', (vin / (r1 + r2)).toFixed(2));
+    safeSet('dividerRatio', ((vout / vin) * 100).toFixed(0));
     
-    document.getElementById('calcVin').textContent = vin;
-    document.getElementById('calcR1').textContent = r1;
-    document.getElementById('calcR2').textContent = r2;
-    document.getElementById('calcR2b').textContent = r2;
-    document.getElementById('calcVin2').textContent = vin;
-    document.getElementById('calcR2c').textContent = r2;
-    document.getElementById('calcRtotal').textContent = (r1 + r2);
-    document.getElementById('calcVoutFinal').textContent = vout.toFixed(2);
+    safeSet('calcVin', vin); safeSet('calcR1', r1); safeSet('calcR2', r2); safeSet('calcR2b', r2);
+    safeSet('calcVin2', vin); safeSet('calcR2c', r2); safeSet('calcRtotal', (r1 + r2)); safeSet('calcVoutFinal', vout.toFixed(2));
     
-    if (typeof drawPotentialDivider === 'function') drawPotentialDivider();
-}
-
-function updateThermistorDivider() {
-    const temp = parseFloat(document.getElementById('thermistorTempSlider2')?.value) || 25;
-    const R25 = 10, B = 3950, T = temp + 273.15, T25 = 298.15;
-    const thermR = R25 * Math.exp(B * (1/T - 1/T25));
-    
-    const fixedR = 10, vin = 12;
-    const vout = vin * thermR / (fixedR + thermR);
-    
-    document.getElementById('thermistorTempValue2').textContent = temp + '°C';
-    document.getElementById('thermistorRValue').textContent = thermR.toFixed(1) + ' kΩ';
-    document.getElementById('thermistorVoutValue').textContent = vout.toFixed(2) + ' V';
-}
-
-function updateLDRDivider() {
-    const light = parseFloat(document.getElementById('ldrLightSlider2')?.value) || 50;
-    const Rdark = 100, gamma = 0.8;
-    let ldrR = light <= 0 ? Rdark : Rdark * Math.pow(light / 100, -gamma);
-    ldrR = Math.max(0.1, Math.min(100, ldrR));
-    
-    const fixedR = 10, vin = 12;
-    const vout = vin * ldrR / (fixedR + ldrR);
-    
-    document.getElementById('ldrLightValue2').textContent = light + '%';
-    document.getElementById('ldrRValue').textContent = ldrR.toFixed(1) + ' kΩ';
-    document.getElementById('ldrVoutValue').textContent = vout.toFixed(2) + ' V';
+    if(window.drawPotentialDivider) window.drawPotentialDivider();
 }
 
 function updatePowerDemo() {
-    const voltage = parseFloat(document.getElementById('powerVoltageSlider')?.value) || 230;
-    const power = parseFloat(document.getElementById('powerWattSlider')?.value) || 60;
+    const v = parseFloat(document.getElementById('powerVoltageSlider')?.value) || 230;
+    const p = parseFloat(document.getElementById('powerWattSlider')?.value) || 60;
+    const i = p / v; const r = (v * v) / p;
     
-    const current = power / voltage;
-    const resistance = (voltage * voltage) / power;
+    safeSet('powerCurrentResult', i.toFixed(2));
+    safeSet('powerResistanceResult', Math.round(r));
+    safeSet('powerWattResult', p);
     
-    document.getElementById('powerCurrentResult').textContent = current.toFixed(2);
-    document.getElementById('powerResistanceResult').textContent = Math.round(resistance);
-    document.getElementById('powerWattResult').textContent = power;
-    
-    document.getElementById('calcPower1').textContent = power;
-    document.getElementById('calcVoltage1').textContent = voltage;
-    document.getElementById('calcCurrent1').textContent = current.toFixed(2);
-    document.getElementById('calcVoltage2').textContent = voltage;
-    document.getElementById('calcPower2').textContent = power;
-    document.getElementById('calcResistance1').textContent = Math.round(resistance);
+    safeSet('calcPower1', p); safeSet('calcVoltage1', v); safeSet('calcCurrent1', i.toFixed(2));
+    safeSet('calcVoltage2', v); safeSet('calcPower2', p); safeSet('calcResistance1', Math.round(r));
 }
 
 function updateEnergyDemo() {
-    const power = parseFloat(document.getElementById('energyPowerSlider')?.value) || 1500;
-    const time = parseFloat(document.getElementById('energyTimeSlider')?.value) || 2;
+    const p = parseFloat(document.getElementById('energyPowerSlider')?.value) || 1500;
+    const t = parseFloat(document.getElementById('energyTimeSlider')?.value) || 2;
+    const kwh = (p / 1000) * t;
     
-    const energyJ = power * time * 3600; 
-    const energyKwh = (power / 1000) * time;
+    safeSet('energyJoulesResult', (p * t * 3600).toLocaleString());
+    safeSet('energyKwhResult', kwh.toFixed(1));
+    safeSet('energyUnitsResult', kwh.toFixed(1));
     
-    document.getElementById('energyJoulesResult').textContent = energyJ.toLocaleString();
-    document.getElementById('energyKwhResult').textContent = energyKwh.toFixed(1);
-    document.getElementById('energyUnitsResult').textContent = energyKwh.toFixed(1);
-    
-    document.getElementById('calcEnergyP').textContent = power;
-    document.getElementById('calcEnergyT').textContent = time;
-    document.getElementById('calcEnergyP2').textContent = (power / 1000).toFixed(1);
-    document.getElementById('calcEnergyT2').textContent = time;
-    document.getElementById('calcEnergyResult').textContent = energyKwh.toFixed(1);
+    safeSet('calcEnergyP', p); safeSet('calcEnergyT', t);
+    safeSet('calcEnergyP2', (p / 1000).toFixed(1)); safeSet('calcEnergyT2', t);
+    safeSet('calcEnergyResult', kwh.toFixed(1));
 }
 
 function updateCostCalculator() {
@@ -919,275 +208,59 @@ function updateCostCalculator() {
     const totalEnergy = dailyEnergy * days;
     const cost = totalEnergy * rate;
     
-    document.getElementById('billPower').textContent = power + ' W';
-    document.getElementById('billHours').textContent = hours + ' hours';
-    document.getElementById('billDays').textContent = days + ' days';
-    document.getElementById('billEnergy').textContent = totalEnergy.toFixed(0) + ' kWh';
-    document.getElementById('billRate').textContent = '$' + rate.toFixed(2) + '/kWh';
-    document.getElementById('billTotal').textContent = '$' + cost.toFixed(2);
+    safeSet('billPower', power + ' W');
+    safeSet('billHours', hours + ' hours');
+    safeSet('billDays', days + ' days');
+    safeSet('billEnergy', totalEnergy.toFixed(0) + ' kWh');
+    safeSet('billRate', '$' + rate.toFixed(2) + '/kWh');
+    safeSet('billTotal', '$' + cost.toFixed(2));
     
-    document.getElementById('breakdownPower').textContent = (power / 1000).toFixed(1);
-    document.getElementById('breakdownHours').textContent = hours;
-    document.getElementById('breakdownDaily').textContent = dailyEnergy.toFixed(1);
-    document.getElementById('breakdownDaily2').textContent = dailyEnergy.toFixed(1);
-    document.getElementById('breakdownDays').textContent = days;
-    document.getElementById('breakdownTotal').textContent = totalEnergy.toFixed(0);
-    document.getElementById('breakdownEnergy').textContent = totalEnergy.toFixed(0);
-    document.getElementById('breakdownRate').textContent = rate.toFixed(2);
-    document.getElementById('breakdownCost').textContent = cost.toFixed(2);
-}
-
-function updateFuseCalculator() {
-    const power = parseFloat(document.getElementById('fusePowerSlider')?.value) || 2000;
-    const voltage = parseFloat(document.getElementById('fuseVoltageSlider')?.value) || 230;
-    const current = power / voltage;
-    let recommendation;
-    
-    if (current <= 3) recommendation = '3A';
-    else if (current <= 5) recommendation = '5A';
-    else if (current <= 13) recommendation = '13A';
-    else recommendation = 'Special (>13A)';
-    
-    document.getElementById('fuseCurrentCalc').textContent = current.toFixed(1);
-    document.getElementById('fuseRecommendation').textContent = recommendation;
+    safeSet('breakdownPower', (power / 1000).toFixed(1));
+    safeSet('breakdownHours', hours);
+    safeSet('breakdownDaily', dailyEnergy.toFixed(1));
+    safeSet('breakdownDaily2', dailyEnergy.toFixed(1));
+    safeSet('breakdownDays', days);
+    safeSet('breakdownTotal', totalEnergy.toFixed(0));
+    safeSet('breakdownEnergy', totalEnergy.toFixed(0));
+    safeSet('breakdownRate', rate.toFixed(2));
+    safeSet('breakdownCost', cost.toFixed(2));
 }
 
 function updateOverload() {
-    const checkboxes = document.querySelectorAll('.appliance-checkbox input:checked');
     let totalCurrent = 0;
-    
-    checkboxes.forEach(cb => {
+    document.querySelectorAll('.appliance-checkbox input:checked').forEach(cb => {
         totalCurrent += parseFloat(cb.dataset.current);
     });
     
-    const display = document.getElementById('totalCurrentDisplay');
+    safeSet('totalCurrentDisplay', totalCurrent.toFixed(2));
     const indicator = document.querySelector('.status-indicator');
     const warning = document.getElementById('overloadWarning');
     
-    display.textContent = totalCurrent.toFixed(2);
-    
     if (totalCurrent <= 10) {
-        indicator.textContent = '✅ Safe';
-        indicator.className = 'status-indicator safe';
-        warning?.classList.add('hidden');
+        indicator.textContent = '✅ Safe'; indicator.className = 'status-indicator safe';
+        if(warning) warning.classList.add('hidden');
     } else if (totalCurrent <= 13) {
-        indicator.textContent = '⚠️ Warning';
-        indicator.className = 'status-indicator warning';
-        warning?.classList.add('hidden');
+        indicator.textContent = '⚠️ Warning'; indicator.className = 'status-indicator warning';
+        if(warning) warning.classList.add('hidden');
     } else {
-        indicator.textContent = '🔥 DANGER!';
-        indicator.className = 'status-indicator danger';
-        warning?.classList.remove('hidden');
+        indicator.textContent = '🔥 DANGER (Fuse Blown)!'; indicator.className = 'status-indicator danger';
+        if(warning) warning.classList.remove('hidden');
     }
 }
 
-// ===== ENERGY USAGE TRACKER =====
-let trackerItems = [];
-
-function addToTracker() {
-    const select = document.getElementById('trackerApplianceSelect');
-    const hoursInput = document.getElementById('trackerHours');
-    
-    const power = parseInt(select.value);
-    const name = select.options[select.selectedIndex].text;
-    const hours = parseFloat(hoursInput.value) || 1;
-    const energy = (power / 1000) * hours;
-    
-    trackerItems.push({ name, power, hours, energy });
-    updateTrackerDisplay();
+function safeSet(id, value) {
+    const el = document.getElementById(id);
+    if(el) el.textContent = value;
 }
-
-function updateTrackerDisplay() {
-    const list = document.getElementById('trackerList');
-    const totalEl = document.getElementById('trackerTotalKwh');
-    
-    list.innerHTML = '';
-    let total = 0;
-    
-    trackerItems.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.className = 'tracker-item';
-        div.innerHTML = `
-            <span>${item.name} × ${item.hours}h</span>
-            <span>${item.energy.toFixed(2)} kWh</span>
-            <button onclick="removeTrackerItem(${index})" style="background:none;border:none;cursor:pointer;color:#ef4444;">✕</button>
-        `;
-        list.appendChild(div);
-        total += item.energy;
-    });
-    totalEl.textContent = total.toFixed(2);
-}
-
-function removeTrackerItem(index) {
-    trackerItems.splice(index, 1);
-    updateTrackerDisplay();
-}
-
-// ===== EVENT LISTENERS =====
-document.getElementById('applianceSelect')?.addEventListener('change', (e) => {
-    const selected = e.target.selectedOptions[0];
-    const power = parseInt(selected.dataset.power);
-    if (power > 0) {
-        const slider = document.getElementById('powerWattSlider');
-        if (slider) {
-            slider.value = power;
-            handleSliderChange(slider);
-        }
-    }
-});
-
-document.getElementById('wireMaterialSelect')?.addEventListener('change', () => {
-    updateWireResistanceDemo();
-});
-
-document.getElementById('configType1')?.addEventListener('click', () => {
-    document.querySelectorAll('[data-config]').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('configType1').classList.add('active');
-    updateCombinedCircuit();
-});
-
-document.getElementById('configType2')?.addEventListener('click', () => {
-    document.querySelectorAll('[data-config]').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('configType2').classList.add('active');
-    updateCombinedCircuit();
-});
-
-document.getElementById('toggleCurrentFlow')?.addEventListener('click', function() {
-    const isRunning = this.classList.toggle('active');
-    if (isRunning) {
-        this.innerHTML = '<span>⏹️</span> Stop Flow';
-        if (typeof startCurrentFlowAnimation === 'function') startCurrentFlowAnimation();
-    } else {
-        this.innerHTML = '<span>▶️</span> Start Flow';
-        if (typeof stopCurrentFlowAnimation === 'function') stopCurrentFlowAnimation();
-    }
-});
-
-document.getElementById('toggleSeriesAnimation')?.addEventListener('click', function() {
-    const isRunning = this.classList.toggle('active');
-    if (isRunning) {
-        this.innerHTML = '<span>⏹️</span> Stop Animation';
-        if (typeof startSeriesAnimation === 'function') startSeriesAnimation();
-    } else {
-        this.innerHTML = '<span>▶️</span> Start Animation';
-        if (typeof stopSeriesAnimation === 'function') stopSeriesAnimation();
-    }
-});
-
-document.getElementById('toggleParallelAnimation')?.addEventListener('click', function() {
-    const isRunning = this.classList.toggle('active');
-    if (isRunning) {
-        this.innerHTML = '<span>⏹️</span> Stop Animation';
-        if (typeof startParallelAnimation === 'function') startParallelAnimation();
-    } else {
-        this.innerHTML = '<span>▶️</span> Start Animation';
-        if (typeof stopParallelAnimation === 'function') stopParallelAnimation();
-    }
-});
-
-document.getElementById('animateFilamentGraph')?.addEventListener('click', () => {
-    if (typeof animateFilamentIVGraph === 'function') animateFilamentIVGraph();
-});
-
-document.getElementById('resetFilamentGraph')?.addEventListener('click', () => {
-    if (typeof resetFilamentGraph === 'function') resetFilamentGraph();
-});
-
-document.getElementById('animateDiodeGraph')?.addEventListener('click', () => {
-    if (typeof animateDiodeIVGraph === 'function') animateDiodeIVGraph();
-});
-
-document.getElementById('resetDiodeGraph')?.addEventListener('click', () => {
-    if (typeof resetDiodeGraph === 'function') resetDiodeGraph();
-});
-
-document.getElementById('animateThermistorGraph')?.addEventListener('click', () => {
-    if (typeof animateThermistorGraph === 'function') animateThermistorGraph();
-});
-
-document.getElementById('animateLDRGraph')?.addEventListener('click', () => {
-    if (typeof animateLDRGraph === 'function') animateLDRGraph();
-});
-
-document.getElementById('heatThermistor')?.addEventListener('click', () => {
-    if (typeof animateThermistorHeating === 'function') animateThermistorHeating();
-});
-
-document.getElementById('coolThermistor')?.addEventListener('click', () => {
-    if (typeof animateThermistorCooling === 'function') animateThermistorCooling();
-});
 
 function initAllCanvasDrawings() {
-    console.log('Initializing canvas drawings...');
-    if (typeof drawVIRTriangle === 'function' && document.getElementById('virTriangleCanvas')) drawVIRTriangle();
-    if (typeof drawCurrentFlowAnimation === 'function' && document.getElementById('currentFlowCanvas')) drawCurrentFlowAnimation();
+    if(window.drawStaticSeriesCircuit) window.drawStaticSeriesCircuit();
+    if(window.drawSeriesCircuit) window.drawSeriesCircuit();
+    if(window.drawStaticParallelCircuit) window.drawStaticParallelCircuit();
+    if(window.drawParallelCircuit) window.drawParallelCircuit();
+    if(window.drawCombinedCircuit) window.drawCombinedCircuit();
+    if(window.drawPotentialDivider) window.drawPotentialDivider();
+    if(window.drawSocket) window.drawSocket();
 }
 
-function initCurrentElectricityCanvases() {
-    if (typeof drawCurrentFlowAnimation === 'function') drawCurrentFlowAnimation();
-    if (typeof drawAmmeterCircuit === 'function') drawAmmeterCircuit();
-    if (typeof drawWaterAnalogy === 'function') drawWaterAnalogy();
-    if (typeof drawVoltmeterCircuit === 'function') drawVoltmeterCircuit();
-    if (typeof drawVIRTriangle === 'function') drawVIRTriangle();
-}
-
-function initDCCircuitsCanvases() {
-    if (typeof drawStaticSeriesCircuit === 'function') drawStaticSeriesCircuit();
-    if (typeof drawSeriesCircuit === 'function') drawSeriesCircuit();
-    if (typeof drawStaticParallelCircuit === 'function') drawStaticParallelCircuit();
-    if (typeof drawParallelCircuit === 'function') drawParallelCircuit();
-    if (typeof drawCombinedCircuit === 'function') drawCombinedCircuit();
-    if (typeof drawPotentialDivider === 'function') drawPotentialDivider();
-}
-
-function initPracticalElectricityCanvases() {
-    if (typeof drawPowerTriangles === 'function') drawPowerTriangles();
-    if (typeof drawEnergyMeter === 'function') drawEnergyMeter();
-    if (typeof drawDangerDemo === 'function') drawDangerDemo();
-}
-
-function initNonOhmicGraphs() {
-    if (typeof drawFilamentIVGraph === 'function') drawFilamentIVGraph();
-    if (typeof drawDiodeIVGraph === 'function') drawDiodeIVGraph();
-    if (typeof drawThermistorGraph === 'function') drawThermistorGraph();
-    if (typeof drawLDRGraph === 'function') drawLDRGraph();
-    if (typeof drawCompareAllGraph === 'function') drawCompareAllGraph();
-}
-
-function initQuizSection() { 
-    // Handled in quizzes.js 
-}
-
-const additionalStyles = `
-.calc-success { color: var(--secondary-green); }
-.calc-error { color: var(--secondary-red); }
-.calc-result {
-    margin-top: 15px;
-    padding: 15px;
-    background: var(--bg-dark);
-    border-radius: var(--radius-md);
-    font-family: monospace;
-    font-size: 1.1rem;
-}
-.calc-result:empty { display: none; }
-`;
-
-const styleSheet = document.createElement('style');
-styleSheet.textContent = additionalStyles;
-document.head.appendChild(styleSheet);
-
-window.AppState = AppState;
-window.navigateTo = navigateTo;
-window.revealSolution = revealSolution;
-window.toggleHint = toggleHint;
-window.calculateCurrent = calculateCurrent;
-window.calculatePD = calculatePD;
-window.calculateOhmsLaw = calculateOhmsLaw;
-window.calculatePower = calculatePower;
-window.calculateDivider = calculateDivider;
-window.clearCalculator = clearCalculator;
-window.addToTracker = addToTracker;
-window.removeTrackerItem = removeTrackerItem;
 window.updateOverload = updateOverload;
-
-console.log('⚡ Main.js loaded successfully');
