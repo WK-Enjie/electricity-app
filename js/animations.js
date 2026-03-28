@@ -1,361 +1,1060 @@
-// ========================================
-// SINGAPORE O-LEVEL ELECTRICITY APP
-// Animation & Physics Engine
-// ========================================
+/* ═══════════════════════════════════════════════════════════════
+   ⚡ ELECTRICITY EXPLORER — animations.js
+   Animated visualisations:
+     • Current flow with electrons
+     • I–V characteristic graphs (ohmic, filament, diode)
+     • Water analogy animation
+   ═══════════════════════════════════════════════════════════════ */
 
-const AnimationState = {
-    currentFlow: { running: false, offset: 0 },
-    series: { running: false, offset: 0 },
-    parallel: { running: false, offset: 0 },
-    combined: { running: false, offset: 0 },
-    graphs: { filament: { progress: 0 }, diode: { progress: 0 }, thermistor: { progress: 0 }, ldr: { progress: 0 } }
-};
 
-const Colors = {
-    wire: '#fbbf24', wireGlow: '#22d3ee', positive: '#ef4444', negative: '#3b82f6',
-    electron: '#60a5fa', conventionalCurrent: '#ef4444', background: '#0f172a',
-    text: '#f1f5f9', textMuted: '#94a3b8', green: '#10b981', orange: '#f59e0b',
-    purple: '#8b5cf6', bulbOn: 'rgba(251, 191, 36, 0.4)', bulbGlow: '#fbbf24'
-};
+/* ═══════════════════════════════════════
+   1. CURRENT FLOW ANIMATION
+   Moving electrons around a circuit loop
+   ═══════════════════════════════════════ */
 
-function getCanvas(id) {
-    const canvas = document.getElementById(id);
-    if (!canvas) return null;
-    return { canvas, ctx: canvas.getContext('2d'), width: canvas.width, height: canvas.height };
-}
+var currentFlowAnim = null;
+var currentFlowElectrons = [];
+var currentFlowRunning = false;
 
-function clearCanvas(ctx, width, height) { ctx.clearRect(0, 0, width, height); }
+function startCurrentFlowAnimation() {
+    var canvas = document.getElementById('canvas-current-flow');
+    if (!canvas) return;
+    resizeCanvas(canvas);
 
-function drawWire(ctx, x1, y1, x2, y2, options = {}) {
-    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-    ctx.strokeStyle = options.color || Colors.wire; ctx.lineWidth = options.width || 3; ctx.stroke();
-}
-
-function drawArrow(ctx, fromX, fromY, toX, toY, options = {}) {
-    const headLength = options.headLength || 10;
-    const angle = Math.atan2(toY - fromY, toX - fromX);
-    ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY);
-    ctx.strokeStyle = options.color || Colors.wire; ctx.lineWidth = options.lineWidth || 2; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(toX, toY);
-    ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
-    ctx.closePath(); ctx.fillStyle = options.color || Colors.wire; ctx.fill();
-}
-
-function drawBatterySymbol(ctx, x, y, cells = 3, options = {}) {
-    const scale = options.scale || 1; const cellWidth = 12 * scale; const startX = x - (cells * cellWidth) / 2;
-    ctx.strokeStyle = Colors.wire; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(x - 40 * scale, y); ctx.lineTo(startX, y); ctx.stroke();
-    for (let i = 0; i < cells; i++) {
-        const cx = startX + i * cellWidth;
-        ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, y - 12 * scale); ctx.lineTo(cx, y + 12 * scale); ctx.stroke();
-        ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx + 6 * scale, y - 6 * scale); ctx.lineTo(cx + 6 * scale, y + 6 * scale); ctx.stroke();
+    // Stop any previous animation
+    if (currentFlowAnim) {
+        cancelAnimationFrame(currentFlowAnim);
+        currentFlowAnim = null;
     }
-    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(startX + cells * cellWidth - 6 * scale, y); ctx.lineTo(x + 40 * scale, y); ctx.stroke();
+
+    // Create electron positions along the circuit path
+    initCurrentFlowElectrons(canvas);
+    currentFlowRunning = true;
+    animateCurrentFlow();
 }
 
-function drawResistorSymbol(ctx, x, y, options = {}) {
-    const scale = options.scale || 1; const width = 40 * scale; const height = 15 * scale;
-    ctx.fillStyle = Colors.background; ctx.fillRect(x - width/2, y - height/2, width, height);
-    ctx.strokeStyle = Colors.wire; ctx.lineWidth = 2; ctx.strokeRect(x - width/2, y - height/2, width, height);
-    if (options.label) {
-        ctx.fillStyle = Colors.textMuted; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(options.label, x, y + 25 * scale);
-    }
-    if (options.value) {
-        ctx.fillStyle = Colors.text; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(options.value, x, y + 4);
+function initCurrentFlowElectrons(canvas) {
+    currentFlowElectrons = [];
+    var numElectrons = 14;
+    for (var i = 0; i < numElectrons; i++) {
+        currentFlowElectrons.push({
+            t: i / numElectrons,  // parameter 0..1 along path
+            speed: 0.002
+        });
     }
 }
 
-function drawBulbSymbol(ctx, x, y, isOn = false, options = {}) {
-    const scale = options.scale || 1; const radius = 15 * scale;
-    ctx.strokeStyle = Colors.wire; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = isOn ? Colors.bulbOn : Colors.background;
-    if (isOn) { ctx.shadowColor = Colors.bulbGlow; ctx.shadowBlur = 20; }
-    ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
-    const cross = radius * 0.7;
-    ctx.beginPath(); ctx.moveTo(x - cross, y - cross); ctx.lineTo(x + cross, y + cross); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x + cross, y - cross); ctx.lineTo(x - cross, y + cross); ctx.stroke();
+function getCircuitPath(W, H) {
+    // Rectangular circuit path — returns array of {x, y} waypoints
+    var pad = 0.12;
+    var left = W * pad;
+    var right = W * (1 - pad);
+    var top_ = H * 0.18;
+    var bottom = H * 0.78;
+    var bulbX = W * 0.5;
+    var batX = W * 0.5;
+
+    // Path goes clockwise (conventional current direction: + terminal → top → right → bottom → left → − terminal)
+    // Electron flow is opposite (counter-clockwise for our animation: bottom-left → top-left → top-right → bottom-right)
+    return [
+        { x: left, y: bottom },      // 0: bottom-left
+        { x: left, y: top_ },        // 1: top-left
+        { x: bulbX - 18, y: top_ },  // 2: before bulb (top)
+        { x: bulbX + 18, y: top_ },  // 3: after bulb (top)
+        { x: right, y: top_ },       // 4: top-right
+        { x: right, y: bottom },     // 5: bottom-right
+        { x: batX + 10, y: bottom }, // 6: before battery (bottom, − terminal)
+        { x: batX - 10, y: bottom }  // 7: after battery (bottom, + terminal)
+    ];
 }
 
-function drawAmmeterSymbol(ctx, x, y, reading = null) {
-    ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2);
-    ctx.fillStyle = Colors.background; ctx.fill(); ctx.strokeStyle = Colors.wire; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = Colors.positive; ctx.font = `bold 16px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('A', x, y);
-    if (reading !== null) { ctx.fillStyle = Colors.wireGlow; ctx.font = '10px sans-serif'; ctx.fillText(reading.toFixed(2) + ' A', x, y + 30); }
+function getPointOnPath(path, t) {
+    // t is 0..1, interpolate along the path segments
+    var totalSegs = path.length;
+    var scaledT = ((t % 1) + 1) % 1; // wrap
+    var segFloat = scaledT * totalSegs;
+    var segIdx = Math.floor(segFloat);
+    var segT = segFloat - segIdx;
+
+    var p1 = path[segIdx % totalSegs];
+    var p2 = path[(segIdx + 1) % totalSegs];
+
+    return {
+        x: p1.x + (p2.x - p1.x) * segT,
+        y: p1.y + (p2.y - p1.y) * segT
+    };
 }
 
-// ===== DC CIRCUITS - ALIGNMENT & DRAWING =====
+function animateCurrentFlow() {
+    if (!currentFlowRunning) return;
 
-function drawStaticSeriesCircuit() {
-    const c = getCanvas('seriesCircuitCanvas'); if (!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    drawWire(ctx, 50, 50, width - 50, 50); drawWire(ctx, width - 50, 50, width - 50, height - 50);
-    drawWire(ctx, width - 50, height - 50, 50, height - 50); drawWire(ctx, 50, height - 50, 50, 50);
-    drawBatterySymbol(ctx, width/2, 50, 3);
-    drawResistorSymbol(ctx, width/2 - 80, height - 50, { label: 'R₁' });
-    drawResistorSymbol(ctx, width/2 + 80, height - 50, { label: 'R₂' });
+    var canvas = document.getElementById('canvas-current-flow');
+    if (!canvas) { currentFlowRunning = false; return; }
+
+    // Check if this page is still visible
+    var section = document.getElementById('sec-current');
+    if (!section || !section.classList.contains('active')) {
+        currentFlowRunning = false;
+        return;
+    }
+
+    var ctx = canvas.getContext('2d');
+    var W = cw(canvas), H = ch(canvas);
+    clearCanvas(ctx, canvas);
+
+    var currentVal = parseFloat(document.getElementById('slider-current').value) || 1;
+    var speedFactor = currentVal / 2.5; // normalise speed
+
+    // Get circuit path
+    var path = getCircuitPath(W, H);
+
+    var pad = 0.12;
+    var left = W * pad;
+    var right = W * (1 - pad);
+    var top_ = H * 0.18;
+    var bottom = H * 0.78;
+    var bulbX = W * 0.5;
+    var batX = W * 0.5;
+
+    // ─── Draw circuit wires ───
+    ctx.save();
+    ctx.strokeStyle = '#3a4a5e';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    for (var w = 1; w < path.length; w++) {
+        ctx.lineTo(path[w].x, path[w].y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+
+    // ─── Draw battery on bottom ───
+    drawBatteryHoriz(ctx, batX - 30, bottom, batX + 30, bottom);
+    drawCentredText(ctx, 'Battery', batX, bottom + 22, '11px sans-serif', '#ffa726');
+
+    // ─── Draw bulb on top ───
+    var brightness = Math.min(currentVal / 3, 1);
+    drawBulb(ctx, bulbX, top_, 16, brightness > 0.15);
+
+    // Glow effect around bulb based on current
+    if (brightness > 0.15) {
+        ctx.save();
+        var glowR = 20 + brightness * 25;
+        var grd = ctx.createRadialGradient(bulbX, top_, 16, bulbX, top_, glowR);
+        grd.addColorStop(0, 'rgba(255,238,88,' + (brightness * 0.4) + ')');
+        grd.addColorStop(1, 'rgba(255,238,88,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(bulbX, top_, glowR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    drawCentredText(ctx, 'Bulb', bulbX, top_ - 28, '11px sans-serif', '#ffee58');
+
+    // ─── Draw ammeter on right side ───
+    var amY = (top_ + bottom) / 2;
+    drawAmmeter(ctx, right, amY, 14);
+    drawWire(ctx, right, top_, right, amY - 14);
+    drawWire(ctx, right, amY + 14, right, bottom);
+    drawText(ctx, currentVal.toFixed(1) + ' A', right + 20, amY, 'bold 12px sans-serif', '#ef5350', 'left');
+
+    // ─── Move and draw electrons ───
+    for (var e = 0; e < currentFlowElectrons.length; e++) {
+        var el = currentFlowElectrons[e];
+        // Update position (electrons move counter-clockwise = opposite to conventional)
+        el.t -= 0.0015 * speedFactor;
+        if (el.t < 0) el.t += 1;
+
+        var pos = getPointOnPath(path, el.t);
+        drawElectron(ctx, pos.x, pos.y, 5);
+    }
+
+    // ─── Conventional current arrow (clockwise, red) ───
+    drawArrow(ctx, left + 20, top_ - 8, right - 20, top_ - 8, '#ef5350', 8);
+    drawCentredText(ctx, 'Conventional current (+ → −)', W / 2, top_ - 20, '10px sans-serif', '#ef5350');
+
+    // ─── Electron flow arrow (counter-clockwise, blue) ───
+    drawArrow(ctx, right - 20, bottom + 10, left + 20, bottom + 10, '#42a5f5', 8);
+    drawCentredText(ctx, 'Electron flow (− → +)', W / 2, bottom + 24, '10px sans-serif', '#42a5f5');
+
+    // ─── Info box ───
+    drawText(ctx, 'I = ' + currentVal.toFixed(1) + ' A', 14, H - 16, '12px sans-serif', '#4fc3f7', 'left');
+    drawText(ctx, 'Speed ∝ Current', 14, H - 32, '10px sans-serif', '#8b90a0', 'left');
+
+    // Loop
+    currentFlowAnim = requestAnimationFrame(animateCurrentFlow);
 }
 
-function drawStaticParallelCircuit() {
-    const c = getCanvas('parallelCircuitCanvas'); if (!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    drawWire(ctx, 50, 50, width - 50, 50); drawBatterySymbol(ctx, width/2, 50, 3);
-    drawWire(ctx, 50, 50, 50, 220); drawWire(ctx, width - 50, 50, width - 50, 220);
-    drawWire(ctx, 50, 130, width - 50, 130); drawWire(ctx, 50, 220, width - 50, 220);
-    drawResistorSymbol(ctx, width/2, 130, { label: 'R₁' });
-    drawResistorSymbol(ctx, width/2, 220, { label: 'R₂' });
-    ctx.fillStyle = Colors.wire; ctx.beginPath(); ctx.arc(50, 130, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(width-50, 130, 5, 0, Math.PI*2); ctx.fill();
-}
-
-function drawSeriesCircuit() {
-    const c = getCanvas('seriesInteractiveCanvas'); if (!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    const emf = parseFloat(document.getElementById('seriesEmfSlider')?.value) || 12;
-    const r1 = parseFloat(document.getElementById('seriesR1Slider')?.value) || 10;
-    const r2 = parseFloat(document.getElementById('seriesR2Slider')?.value) || 20;
-    
-    drawWire(ctx, 50, 50, width - 50, 50); drawWire(ctx, width - 50, 50, width - 50, height - 50);
-    drawWire(ctx, width - 50, height - 50, 50, height - 50); drawWire(ctx, 50, height - 50, 50, 50);
-    drawBatterySymbol(ctx, width/2, 50, 3);
-    ctx.fillStyle = Colors.text; ctx.fillText(`${emf}V`, width/2, 20);
-    drawResistorSymbol(ctx, width/2 - 80, height - 50, { label: 'R₁', value: `${r1}Ω` });
-    drawResistorSymbol(ctx, width/2 + 80, height - 50, { label: 'R₂', value: `${r2}Ω` });
-    
-    if (AnimationState.series.running) {
-        ctx.setLineDash([10, 5]); ctx.lineDashOffset = -AnimationState.series.offset; ctx.strokeStyle = Colors.wireGlow; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(width/2 + 40, 50); ctx.lineTo(width-50, 50); ctx.lineTo(width-50, height-50); ctx.lineTo(width/2 + 130, height-50); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(width/2 - 130, height-50); ctx.lineTo(50, height-50); ctx.lineTo(50, 50); ctx.lineTo(width/2 - 40, 50); ctx.stroke();
-        ctx.setLineDash([]);
+// Stop animation when leaving current page
+function stopCurrentFlowAnimation() {
+    currentFlowRunning = false;
+    if (currentFlowAnim) {
+        cancelAnimationFrame(currentFlowAnim);
+        currentFlowAnim = null;
     }
 }
 
-function drawParallelCircuit() {
-    const c = getCanvas('parallelInteractiveCanvas'); if (!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    const emf = parseFloat(document.getElementById('parallelEmfSlider')?.value) || 12;
-    const r1 = parseFloat(document.getElementById('parallelR1Slider')?.value) || 20;
-    const r2 = parseFloat(document.getElementById('parallelR2Slider')?.value) || 30;
-    
-    drawWire(ctx, 50, 50, width - 50, 50); drawBatterySymbol(ctx, width/2, 50, 3);
-    ctx.fillStyle = Colors.text; ctx.fillText(`${emf}V`, width/2, 20);
-    drawWire(ctx, 50, 50, 50, 250); drawWire(ctx, width - 50, 50, width - 50, 250);
-    drawWire(ctx, 50, 150, width - 50, 150); drawWire(ctx, 50, 250, width - 50, 250);
-    
-    drawResistorSymbol(ctx, width/2, 150, { label: 'R₁', value: `${r1}Ω` });
-    drawResistorSymbol(ctx, width/2, 250, { label: 'R₂', value: `${r2}Ω` });
-    
-    ctx.fillStyle = Colors.wire; ctx.beginPath(); ctx.arc(50, 150, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(width-50, 150, 5, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = Colors.positive; ctx.fillText(`I₁ = ${(emf/r1).toFixed(2)}A`, width/2, 120); ctx.fillText(`I₂ = ${(emf/r2).toFixed(2)}A`, width/2, 220);
-    
-    if (AnimationState.parallel.running) {
-        ctx.setLineDash([10, 5]); ctx.lineDashOffset = -AnimationState.parallel.offset; ctx.strokeStyle = Colors.wireGlow; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(60, 150); ctx.lineTo(width/2 - 40, 150); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(60, 250); ctx.lineTo(width/2 - 40, 250); ctx.stroke();
-        ctx.setLineDash([]);
+
+/* ═══════════════════════════════════════
+   2. I–V CHARACTERISTIC GRAPHS
+   For ohmic, filament lamp, semiconductor diode
+   ═══════════════════════════════════════ */
+
+var ivAnimProgress = 0;
+var ivAnimId = null;
+var ivAnimRunning = false;
+
+function drawIVGraph() {
+    // Reset animation
+    ivAnimProgress = 0;
+    if (ivAnimId) {
+        cancelAnimationFrame(ivAnimId);
+        ivAnimId = null;
     }
+    ivAnimRunning = true;
+    animateIVGraph();
 }
 
-function drawCombinedCircuit() {
-    const c = getCanvas('combinedCircuitCanvas'); if (!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    const emf = parseFloat(document.getElementById('combinedEmfSlider')?.value) || 12;
-    const r1 = parseFloat(document.getElementById('combinedR1Slider')?.value) || 10;
-    const r2 = parseFloat(document.getElementById('combinedR2Slider')?.value) || 20;
-    const r3 = parseFloat(document.getElementById('combinedR3Slider')?.value) || 20;
-    const isType1 = document.getElementById('configType1')?.classList.contains('active');
+function animateIVGraph() {
+    if (!ivAnimRunning) return;
 
-    drawWire(ctx, 50, 50, width - 50, 50); drawBatterySymbol(ctx, width/2, 50, 3);
-    ctx.fillStyle = Colors.text; ctx.fillText(`${emf}V`, width/2, 20);
+    var canvas = document.getElementById('canvas-iv');
+    if (!canvas) { ivAnimRunning = false; return; }
 
-    if (isType1) {
-        drawWire(ctx, 50, 50, 50, 200); drawWire(ctx, 50, 200, 250, 200); drawResistorSymbol(ctx, 150, 200, { label: 'R₁', value: `${r1}Ω` });
-        drawWire(ctx, 250, 200, 350, 200); drawWire(ctx, width - 50, 50, width - 50, 200); drawWire(ctx, 550, 200, width - 50, 200);
-        drawWire(ctx, 350, 120, 550, 120); drawWire(ctx, 350, 120, 350, 280); drawWire(ctx, 550, 120, 550, 280); drawWire(ctx, 350, 280, 550, 280);
-        drawResistorSymbol(ctx, 450, 120, { label: 'R₂', value: `${r2}Ω` }); drawResistorSymbol(ctx, 450, 280, { label: 'R₃', value: `${r3}Ω` });
-        ctx.fillStyle = Colors.wire; ctx.beginPath(); ctx.arc(350, 200, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(550, 200, 5, 0, Math.PI*2); ctx.fill();
+    var section = document.getElementById('sec-nonohmic');
+    if (!section || !section.classList.contains('active')) {
+        ivAnimRunning = false;
+        return;
+    }
+
+    var ctx = canvas.getContext('2d');
+    var W = cw(canvas), H = ch(canvas);
+    clearCanvas(ctx, canvas);
+
+    // Graph area
+    var pad = { left: 60, right: 30, top: 45, bottom: 55 };
+    var gw = W - pad.left - pad.right;
+    var gh = H - pad.top - pad.bottom;
+    var ox = pad.left + gw / 2;  // origin at centre (for diode negative region)
+    var oy = pad.top + gh / 2;
+
+    // Draw axes through centre
+    ctx.save();
+    ctx.strokeStyle = '#e2e4ea';
+    ctx.lineWidth = 1.5;
+    // Horizontal axis (V)
+    ctx.beginPath();
+    ctx.moveTo(pad.left - 5, oy);
+    ctx.lineTo(pad.left + gw + 5, oy);
+    ctx.stroke();
+    // Vertical axis (I)
+    ctx.beginPath();
+    ctx.moveTo(ox, pad.top - 5);
+    ctx.lineTo(ox, pad.top + gh + 5);
+    ctx.stroke();
+    ctx.restore();
+
+    // Axis labels
+    drawText(ctx, 'V', pad.left + gw + 10, oy, '13px sans-serif', '#42a5f5', 'left');
+    drawText(ctx, 'I', ox, pad.top - 15, '13px sans-serif', '#ef5350', 'center');
+    drawText(ctx, '0', ox - 10, oy + 14, '11px sans-serif', '#8b90a0', 'center');
+
+    // Animate progress (0 to 1)
+    if (ivAnimProgress < 1) {
+        ivAnimProgress += 0.015;
+        if (ivAnimProgress > 1) ivAnimProgress = 1;
+    }
+
+    // Draw based on selected conductor
+    switch (currentConductor) {
+        case 'ohmic':
+            drawOhmicIV(ctx, ox, oy, gw, gh, pad, ivAnimProgress);
+            break;
+        case 'filament':
+            drawFilamentIV(ctx, ox, oy, gw, gh, pad, ivAnimProgress);
+            break;
+        case 'diode':
+            drawDiodeIV(ctx, ox, oy, gw, gh, pad, ivAnimProgress);
+            break;
+    }
+
+    // Title
+    var titles = {
+        ohmic: 'Ohmic Conductor (e.g. Constantan Wire)',
+        filament: 'Filament Lamp',
+        diode: 'Semiconductor Diode'
+    };
+    drawCentredText(ctx, 'I–V Characteristic: ' + (titles[currentConductor] || ''),
+        W / 2, 20, 'bold 12px sans-serif', '#4fc3f7');
+
+    if (ivAnimProgress < 1) {
+        ivAnimId = requestAnimationFrame(animateIVGraph);
     } else {
-        drawWire(ctx, 50, 50, 50, 200); drawWire(ctx, 50, 200, 150, 200); drawWire(ctx, 350, 200, 450, 200);
-        drawWire(ctx, 150, 120, 350, 120); drawWire(ctx, 150, 120, 150, 280); drawWire(ctx, 350, 120, 350, 280); drawWire(ctx, 150, 280, 350, 280);
-        drawResistorSymbol(ctx, 250, 120, { label: 'R₁', value: `${r1}Ω` }); drawResistorSymbol(ctx, 250, 280, { label: 'R₂', value: `${r2}Ω` });
-        ctx.fillStyle = Colors.wire; ctx.beginPath(); ctx.arc(150, 200, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(350, 200, 5, 0, Math.PI*2); ctx.fill();
-        drawWire(ctx, 450, 200, width - 50, 200); drawResistorSymbol(ctx, 550, 200, { label: 'R₃', value: `${r3}Ω` });
-        drawWire(ctx, width - 50, 200, width - 50, 50);
+        ivAnimRunning = false;
+        // Draw hover instruction
+        drawCentredText(ctx, '(Graph complete)', W / 2, H - 12, '10px sans-serif', '#8b90a0');
     }
+}
 
-    if (AnimationState.combined.running) {
-        ctx.setLineDash([10, 5]); ctx.lineDashOffset = -AnimationState.combined.offset; ctx.strokeStyle = Colors.wireGlow; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(width/2 + 40, 50); ctx.lineTo(width-50, 50); ctx.lineTo(width-50, 200); ctx.lineTo(isType1 ? 550 : 600, 200); ctx.stroke();
+
+/* ─── Ohmic conductor I–V ─── */
+function drawOhmicIV(ctx, ox, oy, gw, gh, pad, progress) {
+    var halfGW = gw / 2;
+    var halfGH = gh / 2;
+
+    // Straight line through origin: I = V/R
+    // Scale: V from -6 to +6, I from -0.6 to +0.6
+    var maxV = 6;
+    var maxI = 0.6;
+
+    // Grid lines
+    drawIVGrid(ctx, ox, oy, halfGW, halfGH, maxV, maxI, 2, 0.2);
+
+    ctx.save();
+    ctx.strokeStyle = '#4fc3f7';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+
+    var steps = Math.floor(200 * progress);
+    for (var i = 0; i <= steps; i++) {
+        var t = (i / 200) * 2 - 1; // -1 to +1
+        var V = t * maxV;
+        var I = V / 10; // R = 10Ω
+
+        var px = ox + (V / maxV) * halfGW;
+        var py = oy - (I / maxI) * halfGH;
+
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Label
+    if (progress > 0.8) {
+        drawText(ctx, 'Straight line', ox + halfGW * 0.5, oy - halfGH * 0.6,
+            'bold 12px sans-serif', '#66bb6a', 'left');
+        drawText(ctx, '→ Constant R', ox + halfGW * 0.5, oy - halfGH * 0.6 + 16,
+            '11px sans-serif', '#66bb6a', 'left');
+        drawText(ctx, 'R = V/I = constant', ox + halfGW * 0.5, oy - halfGH * 0.6 + 32,
+            '11px sans-serif', '#8b90a0', 'left');
+    }
+}
+
+
+/* ─── Filament lamp I–V ─── */
+function drawFilamentIV(ctx, ox, oy, gw, gh, pad, progress) {
+    var halfGW = gw / 2;
+    var halfGH = gh / 2;
+    var maxV = 6;
+    var maxI = 0.8;
+
+    drawIVGrid(ctx, ox, oy, halfGW, halfGH, maxV, maxI, 2, 0.2);
+
+    // Filament lamp: symmetric S-curve through origin
+    // I increases less steeply as V increases (R increases with temperature)
+    ctx.save();
+    ctx.strokeStyle = '#ffa726';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+
+    var steps = Math.floor(200 * progress);
+    for (var i = 0; i <= steps; i++) {
+        var t = (i / 200) * 2 - 1; // -1 to +1
+        var V = t * maxV;
+        // Non-linear: I = k * V^(1/2) for filament (simplified)
+        // Use: I = 0.25 * sign(V) * |V|^0.6
+        var I = 0.22 * Math.sign(V) * Math.pow(Math.abs(V), 0.6);
+
+        var px = ox + (V / maxV) * halfGW;
+        var py = oy - (I / maxI) * halfGH;
+
+        py = clamp(py, pad.top, pad.top + gh);
+
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Dashed straight line for comparison
+    if (progress > 0.5) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(79,195,247,0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(ox - halfGW, oy + halfGH * 0.8);
+        ctx.lineTo(ox + halfGW, oy - halfGH * 0.8);
+        ctx.stroke();
         ctx.setLineDash([]);
+        ctx.restore();
+        drawText(ctx, '(ohmic line for comparison)', ox + halfGW * 0.2, oy - halfGH * 0.85,
+            '10px sans-serif', 'rgba(79,195,247,0.5)', 'left');
+    }
+
+    // Labels
+    if (progress > 0.8) {
+        drawText(ctx, 'Curve bends', ox + halfGW * 0.3, oy - halfGH * 0.45,
+            'bold 12px sans-serif', '#ffa726', 'left');
+        drawText(ctx, '→ R increases', ox + halfGW * 0.3, oy - halfGH * 0.45 + 16,
+            '11px sans-serif', '#ffa726', 'left');
+        drawText(ctx, '(temp ↑ → R ↑)', ox + halfGW * 0.3, oy - halfGH * 0.45 + 32,
+            '11px sans-serif', '#8b90a0', 'left');
     }
 }
 
-function drawStaticPotentialDivider() {
-    const c = getCanvas('potentialDividerCanvas'); if(!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    const cx = width / 2;
-    drawWire(ctx, cx - 100, 50, cx + 100, 50); drawBatterySymbol(ctx, cx, 50, 3);
-    drawWire(ctx, cx - 100, 50, cx - 100, 300); drawWire(ctx, cx + 100, 50, cx + 100, 300); drawWire(ctx, cx - 100, 300, cx + 100, 300);
-    ctx.clearRect(cx - 110, 100, 20, 150); // Break wire for resistors
-    drawResistorSymbol(ctx, cx - 100, 120, { label: 'R₁' }); drawResistorSymbol(ctx, cx - 100, 220, { label: 'R₂' });
-    drawWire(ctx, cx - 100, 170, cx + 20, 170); drawWire(ctx, cx - 100, 270, cx + 20, 270);
-    ctx.beginPath(); ctx.arc(cx + 20, 170, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx + 20, 270, 5, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = Colors.text; ctx.fillText('V_out', cx + 40, 220);
-}
 
-function drawPotentialDivider() {
-    const c = getCanvas('dividerInteractiveCanvas'); if (!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    const vin = parseFloat(document.getElementById('dividerVinSlider')?.value) || 12;
-    const r1 = parseFloat(document.getElementById('dividerR1Slider')?.value) || 10;
-    const r2 = parseFloat(document.getElementById('dividerR2Slider')?.value) || 10;
-    const vout = vin * r2 / (r1 + r2); const cx = width / 2;
-    
-    drawWire(ctx, cx, 50, cx, 300);
-    drawResistorSymbol(ctx, cx, 120, { label: 'R₁', value: `${r1}kΩ` });
-    drawResistorSymbol(ctx, cx, 240, { label: 'R₂', value: `${r2}kΩ` });
-    drawWire(ctx, cx, 180, cx + 80, 180);
-    
-    ctx.fillStyle = Colors.positive; ctx.fillText(`Vin = ${vin}V`, cx, 30);
-    ctx.fillStyle = Colors.negative; ctx.fillText('0V', cx, 320);
-    ctx.fillStyle = Colors.green; ctx.fillText(`Vout = ${vout.toFixed(2)}V`, cx + 90, 175);
-    ctx.beginPath(); ctx.arc(cx, 180, 5, 0, Math.PI*2); ctx.fill();
-}
+/* ─── Semiconductor diode I–V ─── */
+function drawDiodeIV(ctx, ox, oy, gw, gh, pad, progress) {
+    var halfGW = gw / 2;
+    var halfGH = gh / 2;
+    var maxV = 2;     // forward to 2V
+    var minV = -2;    // reverse to -2V
+    var maxI = 1.2;   // forward current up to ~1.2 units
+    var minI = -0.1;  // tiny reverse current
 
-// ===== PRACTICAL ELECTRICITY & SAFETY COMPONENTS =====
+    // Custom grid for diode
+    ctx.save();
+    ctx.strokeStyle = '#2a2e3e';
+    ctx.lineWidth = 0.5;
 
-function drawSocket() {
-    const c = getCanvas('socketCanvas'); if(!c) return; const {ctx, width, height} = c; clearCanvas(ctx, width, height);
-    ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.roundRect(width/2 - 60, height/2 - 60, 120, 120, 10); ctx.fill(); 
-    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(width/2 - 8, height/2 - 30, 16, 25); // Earth
-    ctx.fillRect(width/2 - 30, height/2 + 10, 20, 15); // Neutral
-    ctx.fillRect(width/2 + 10, height/2 + 10, 20, 15); // Live
-    ctx.fillStyle = '#ef4444'; ctx.fillRect(width/2 + 35, height/2 - 40, 15, 20); // Switch
-}
+    // V grid
+    for (var v = -2; v <= 2; v += 0.5) {
+        var xp = ox + (v / maxV) * halfGW;
+        ctx.beginPath();
+        ctx.moveTo(xp, pad.top);
+        ctx.lineTo(xp, pad.top + gh);
+        ctx.stroke();
+        if (v === Math.round(v)) {
+            drawText(ctx, v.toFixed(0), xp, oy + 14, '10px sans-serif', '#8b90a0', 'center');
+        }
+    }
+    // I grid
+    for (var ia = -0.2; ia <= 1.2; ia += 0.2) {
+        var yp = oy - (ia / maxI) * halfGH;
+        if (yp >= pad.top && yp <= pad.top + gh) {
+            ctx.beginPath();
+            ctx.moveTo(pad.left, yp);
+            ctx.lineTo(pad.left + gw, yp);
+            ctx.stroke();
+            drawText(ctx, ia.toFixed(1), ox - 8, yp, '10px sans-serif', '#8b90a0', 'right');
+        }
+    }
+    ctx.restore();
 
-function drawDangerDemo(scenario = 'short-circuit') {
-    const c = getCanvas('dangerDemoCanvas'); if(!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    
-    drawWire(ctx, 100, 100, width - 100, 100); drawWire(ctx, 100, 100, 100, 250);
-    drawWire(ctx, width - 100, 100, width - 100, 250); drawWire(ctx, 100, 250, width - 100, 250);
-    drawBatterySymbol(ctx, width/2, 100, 4); drawResistorSymbol(ctx, width/2, 250, { label: 'Appliance' });
-    
-    ctx.font = '24px sans-serif'; ctx.textAlign = 'center';
-    if (scenario === 'short-circuit') {
-        ctx.strokeStyle = Colors.negative; drawWire(ctx, width/2 - 60, 150, width/2 + 60, 150, { color: Colors.negative });
-        drawWire(ctx, width/2 - 60, 150, width/2 - 60, 250, { color: Colors.negative });
-        drawWire(ctx, width/2 + 60, 150, width/2 + 60, 250, { color: Colors.negative });
-        ctx.fillText('💥 FIRE!', width/2, 140);
-    } else if (scenario === 'overload') {
-        drawWire(ctx, 150, 180, width - 150, 180); drawWire(ctx, 150, 220, width - 150, 220);
-        drawResistorSymbol(ctx, width/2, 180, { label: 'Appliance 2' }); drawResistorSymbol(ctx, width/2, 220, { label: 'Appliance 3' });
-        ctx.fillText('🔥 OVERHEAT!', width/2, 150);
-    } else if (scenario === 'damaged-wire') {
-        ctx.clearRect(100 - 15, 150, 30, 50); ctx.strokeStyle = '#ef4444';
-        ctx.beginPath(); ctx.moveTo(100, 150); ctx.lineTo(90, 175); ctx.lineTo(110, 185); ctx.lineTo(100, 200); ctx.stroke();
-        ctx.fillText('⚡ SHOCK HAZARD!', width/2, 180);
-    } else if (scenario === 'water') {
-        ctx.fillText('💧 Water conducts electricity!', width/2, 200);
-        ctx.fillStyle = '#3b82f6'; ctx.beginPath(); ctx.arc(width/2 - 50, 250, 20, 0, Math.PI*2); ctx.fill();
+    // Threshold voltage line
+    var threshX = ox + (0.7 / maxV) * halfGW;
+    drawDashedLine(ctx, threshX, pad.top, threshX, pad.top + gh, '#ef535066');
+    if (progress > 0.5) {
+        drawText(ctx, '~0.7V', threshX + 4, pad.top + 10, '10px sans-serif', '#ef5350', 'left');
+        drawText(ctx, '(threshold)', threshX + 4, pad.top + 22, '9px sans-serif', '#ef535099', 'left');
+    }
+
+    // Diode I–V curve
+    ctx.save();
+    ctx.strokeStyle = '#66bb6a';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+
+    var steps = Math.floor(300 * progress);
+    var firstPoint = true;
+
+    for (var i = 0; i <= steps; i++) {
+        var t = i / 300; // 0 to 1
+        // Map t: first half = reverse bias (-2V to 0V), second half = forward (0V to 2V)
+        var V;
+        if (t < 0.4) {
+            V = -2 + (t / 0.4) * 2; // -2 to 0
+        } else {
+            V = ((t - 0.4) / 0.6) * 2; // 0 to 2
+        }
+
+        var I;
+        if (V < 0) {
+            // Reverse bias — tiny leakage current
+            I = -0.02;
+        } else if (V < 0.6) {
+            // Below threshold — almost zero
+            I = 0.005 * Math.exp(V * 2);
+        } else {
+            // Forward bias — exponential rise
+            I = 0.005 * Math.exp(V * 2) + 0.1 * Math.pow(V - 0.5, 3);
+        }
+
+        I = clamp(I, minI, maxI);
+
+        var px = ox + (V / maxV) * halfGW;
+        var py = oy - (I / maxI) * halfGH;
+        py = clamp(py, pad.top, pad.top + gh);
+        px = clamp(px, pad.left, pad.left + gw);
+
+        if (firstPoint) {
+            ctx.moveTo(px, py);
+            firstPoint = false;
+        } else {
+            ctx.lineTo(px, py);
+        }
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Labels
+    if (progress > 0.6) {
+        // Forward bias region
+        drawText(ctx, 'Forward bias', ox + halfGW * 0.4, oy - halfGH * 0.7,
+            'bold 12px sans-serif', '#66bb6a', 'center');
+        drawText(ctx, '(conducts)', ox + halfGW * 0.4, oy - halfGH * 0.7 + 15,
+            '11px sans-serif', '#66bb6a', 'center');
+    }
+    if (progress > 0.3) {
+        // Reverse bias region
+        drawText(ctx, 'Reverse bias', ox - halfGW * 0.5, oy + halfGH * 0.3,
+            'bold 12px sans-serif', '#ef5350', 'center');
+        drawText(ctx, '(no current)', ox - halfGW * 0.5, oy + halfGH * 0.3 + 15,
+            '11px sans-serif', '#ef5350', 'center');
+    }
+
+    // Diode symbol at bottom right
+    if (progress > 0.9) {
+        drawDiodeSymbol(ctx, pad.left + gw - 50, pad.top + gh - 30);
     }
 }
 
-function drawFuseDiagram() {
-    const c = getCanvas('fuseDiagramCanvas'); if(!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    ctx.strokeStyle = Colors.textMuted; ctx.lineWidth = 4; ctx.strokeRect(100, 50, 200, 50);
-    ctx.fillStyle = Colors.wire; ctx.fillRect(80, 50, 20, 50); ctx.fillRect(300, 50, 20, 50);
-    ctx.strokeStyle = Colors.wire; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(100, 75); ctx.lineTo(300, 75); ctx.stroke();
-    ctx.fillStyle = Colors.text; ctx.textAlign = 'center'; ctx.font = '14px sans-serif'; 
-    ctx.fillText('Glass/Ceramic Tube', 200, 35); ctx.fillText('Thin Fuse Wire', 200, 125);
+
+/* ─── Diode circuit symbol ─── */
+function drawDiodeSymbol(ctx, x, y) {
+    ctx.save();
+    ctx.strokeStyle = '#e2e4ea';
+    ctx.fillStyle = '#e2e4ea';
+    ctx.lineWidth = 2;
+
+    // Triangle
+    ctx.beginPath();
+    ctx.moveTo(x - 10, y - 10);
+    ctx.lineTo(x - 10, y + 10);
+    ctx.lineTo(x + 10, y);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Bar
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y - 10);
+    ctx.lineTo(x + 10, y + 10);
+    ctx.stroke();
+
+    // Leads
+    ctx.beginPath();
+    ctx.moveTo(x - 22, y);
+    ctx.lineTo(x - 10, y);
+    ctx.moveTo(x + 10, y);
+    ctx.lineTo(x + 22, y);
+    ctx.stroke();
+
+    ctx.restore();
 }
 
-function drawMCBDiagram() {
-    const c = getCanvas('mcbDiagramCanvas'); if(!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    ctx.strokeStyle = Colors.textMuted; ctx.lineWidth = 2; ctx.strokeRect(150, 20, 100, 140);
-    ctx.fillStyle = Colors.negative; ctx.fillRect(180, 40, 40, 20); // Switch Handle
-    ctx.strokeStyle = Colors.orange; ctx.lineWidth = 3;
-    for(let i=0; i<4; i++) { ctx.beginPath(); ctx.arc(200, 90 + i*10, 15, 0, Math.PI); ctx.stroke(); }
-    ctx.fillStyle = Colors.text; ctx.textAlign = 'center'; ctx.font = '14px sans-serif';
-    ctx.fillText('Switch (Resettable)', 200, 10); ctx.fillText('Electromagnet Coil', 200, 175);
+
+/* ─── I–V Grid Helper ─── */
+function drawIVGrid(ctx, ox, oy, halfGW, halfGH, maxV, maxI, vStep, iStep) {
+    ctx.save();
+    ctx.strokeStyle = '#2a2e3e';
+    ctx.lineWidth = 0.5;
+
+    // Vertical grid lines (V values)
+    for (var v = -maxV; v <= maxV; v += vStep) {
+        var xp = ox + (v / maxV) * halfGW;
+        ctx.beginPath();
+        ctx.moveTo(xp, oy - halfGH);
+        ctx.lineTo(xp, oy + halfGH);
+        ctx.stroke();
+        if (v !== 0) {
+            drawText(ctx, v.toFixed(0), xp, oy + 14, '10px sans-serif', '#8b90a0', 'center');
+        }
+    }
+
+    // Horizontal grid lines (I values)
+    for (var i = -maxI; i <= maxI; i += iStep) {
+        if (Math.abs(i) < 0.001) continue;
+        var yp = oy - (i / maxI) * halfGH;
+        ctx.beginPath();
+        ctx.moveTo(ox - halfGW, yp);
+        ctx.lineTo(ox + halfGW, yp);
+        ctx.stroke();
+        // Label every other line
+        var rounded = Math.round(i * 100) / 100;
+        if (Math.abs(rounded % (iStep * 2)) < 0.001 || iStep >= 0.2) {
+            drawText(ctx, rounded.toFixed(1), ox - 8, yp, '10px sans-serif', '#8b90a0', 'right');
+        }
+    }
+    ctx.restore();
 }
 
-function drawEarthingDemo(state = 'normal') {
-    const c = getCanvas('earthingDemoCanvas'); if(!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 4; ctx.strokeRect(300, 100, 150, 150); // Casing
-    ctx.fillStyle = Colors.text; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Metal Casing', 375, 90);
-    ctx.beginPath(); ctx.arc(375, 175, 40, 0, Math.PI*2); ctx.stroke(); ctx.fillText('Motor', 375, 180);
-    
-    // Live
-    ctx.strokeStyle = '#8b4513'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(100, 150); ctx.lineTo(335, 150); ctx.stroke();
-    ctx.fillStyle = '#8b4513'; ctx.fillText('Live', 150, 140);
-    // Neutral
-    ctx.strokeStyle = '#3b82f6'; ctx.beginPath(); ctx.moveTo(100, 200); ctx.lineTo(335, 200); ctx.stroke();
-    ctx.fillStyle = '#3b82f6'; ctx.fillText('Neutral', 150, 190);
-    // Earth
-    ctx.strokeStyle = '#22c55e'; ctx.beginPath(); ctx.moveTo(100, 100); ctx.lineTo(300, 100); ctx.stroke();
-    ctx.fillStyle = '#22c55e'; ctx.fillText('Earth', 150, 90);
-    
-    if(state === 'fault') {
-        ctx.strokeStyle = '#8b4513'; ctx.beginPath(); ctx.moveTo(315, 150); ctx.lineTo(300, 120); ctx.stroke();
-        ctx.setLineDash([5, 5]); ctx.strokeStyle = Colors.negative;
-        ctx.beginPath(); ctx.moveTo(300, 120); ctx.lineTo(300, 100); ctx.lineTo(100, 100); ctx.stroke(); ctx.setLineDash([]);
-        ctx.fillStyle = Colors.negative; ctx.fillText('Fault Current flows to Earth!', 375, 280); ctx.fillText('Fuse Blows', 150, 120);
+
+/* ═══════════════════════════════════════
+   3. WATER ANALOGY ANIMATION
+   Optional: animate water drops flowing
+   ═══════════════════════════════════════ */
+
+var waterDrops = [];
+var waterAnimId = null;
+var waterAnimRunning = false;
+
+function startWaterAnimation() {
+    var canvas = document.getElementById('canvas-water-analogy');
+    if (!canvas) return;
+
+    if (waterAnimId) {
+        cancelAnimationFrame(waterAnimId);
+    }
+
+    // Initialize water drops on the left side (pipe system)
+    waterDrops = [];
+    for (var i = 0; i < 8; i++) {
+        waterDrops.push({
+            t: i / 8,
+            speed: 0.003
+        });
+    }
+    waterAnimRunning = true;
+    animateWater();
+}
+
+function getWaterPath(W, H) {
+    var col1 = W * 0.25;
+    var highY = H * 0.18;
+    var lowY = H * 0.82;
+    var pumpY = H * 0.3;
+    var wheelY = H * 0.58;
+
+    // Clockwise path for water drops
+    return [
+        { x: col1 + 50, y: pumpY - 18 },  // out of pump top
+        { x: col1 + 50, y: highY },         // top right
+        { x: col1 - 50, y: highY },         // top left
+        { x: col1 - 50, y: wheelY - 18 },   // before wheel
+        { x: col1 - 50, y: wheelY + 18 },   // after wheel
+        { x: col1 - 50, y: lowY },          // bottom left
+        { x: col1 + 50, y: lowY },          // bottom right
+        { x: col1 + 50, y: pumpY + 18 }     // back to pump
+    ];
+}
+
+function animateWater() {
+    if (!waterAnimRunning) return;
+
+    var canvas = document.getElementById('canvas-water-analogy');
+    if (!canvas) { waterAnimRunning = false; return; }
+
+    var section = document.getElementById('sec-pd');
+    if (!section || !section.classList.contains('active')) {
+        waterAnimRunning = false;
+        return;
+    }
+
+    // Draw the static water analogy first
+    drawWaterAnalogy();
+
+    var ctx = canvas.getContext('2d');
+    var W = cw(canvas), H = ch(canvas);
+    var path = getWaterPath(W, H);
+
+    // Animate water drops
+    for (var i = 0; i < waterDrops.length; i++) {
+        var drop = waterDrops[i];
+        drop.t += drop.speed;
+        if (drop.t > 1) drop.t -= 1;
+
+        var pos = getPointOnPath(path, drop.t);
+
+        ctx.save();
+        ctx.fillStyle = '#29b6f6';
+        ctx.shadowColor = '#29b6f6';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    waterAnimId = requestAnimationFrame(animateWater);
+}
+
+function stopWaterAnimation() {
+    waterAnimRunning = false;
+    if (waterAnimId) {
+        cancelAnimationFrame(waterAnimId);
+        waterAnimId = null;
     }
 }
 
-function drawPlugDiagram() {
-    const c = getCanvas('plugDiagramCanvas'); if(!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    ctx.strokeStyle = Colors.textMuted; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(100, 50, 250, 250, 20); ctx.stroke();
-    ctx.fillStyle = '#22c55e'; ctx.fillRect(210, 70, 30, 60); ctx.fillStyle = Colors.text; ctx.font = '14px sans-serif'; ctx.fillText('Earth (E)', 225, 55);
-    ctx.fillStyle = '#3b82f6'; ctx.fillRect(130, 160, 30, 60); ctx.fillText('Neutral (N)', 145, 145);
-    ctx.fillStyle = '#8b4513'; ctx.fillRect(290, 160, 30, 60); ctx.fillText('Live (L)', 305, 145);
-    ctx.fillStyle = Colors.textMuted; ctx.fillRect(290, 100, 20, 50); ctx.fillStyle = Colors.text; ctx.fillText('Fuse', 330, 125);
-    ctx.fillRect(175, 260, 100, 20); ctx.fillText('Cable Grip', 225, 305);
+
+/* ═══════════════════════════════════════
+   4. SERIES CIRCUIT ELECTRON ANIMATION
+   ═══════════════════════════════════════ */
+
+var seriesElectrons = [];
+var seriesAnimId = null;
+var seriesAnimRunning = false;
+
+function startSeriesAnimation() {
+    var canvas = document.getElementById('canvas-series');
+    if (!canvas) return;
+
+    if (seriesAnimId) cancelAnimationFrame(seriesAnimId);
+
+    seriesElectrons = [];
+    for (var i = 0; i < 10; i++) {
+        seriesElectrons.push({ t: i / 10 });
+    }
+    seriesAnimRunning = true;
+    animateSeriesCircuit();
 }
 
-function drawSafetySystem() {
-    const c = getCanvas('safetySystemCanvas'); if(!c) return; const { ctx, width, height } = c; clearCanvas(ctx, width, height);
-    drawWire(ctx, 50, 150, 650, 150, {color: '#8b4513'}); // Live
-    drawWire(ctx, 50, 200, 650, 200, {color: '#3b82f6'}); // Neutral
-    drawWire(ctx, 50, 100, 550, 100, {color: '#22c55e'}); // Earth
-    
-    ctx.fillStyle = Colors.text; ctx.font = '14px sans-serif'; ctx.fillText('230V Mains', 80, 130);
-    ctx.fillStyle = Colors.background; ctx.fillRect(150, 120, 60, 100); ctx.strokeStyle = Colors.textMuted; ctx.strokeRect(150, 120, 60, 100);
-    ctx.fillStyle = Colors.text; ctx.fillText('MCB', 180, 175);
-    ctx.fillStyle = Colors.background; ctx.fillRect(300, 130, 40, 40); ctx.beginPath(); ctx.moveTo(300, 150); ctx.lineTo(330, 135); ctx.strokeStyle = Colors.wire; ctx.stroke();
-    ctx.fillStyle = Colors.text; ctx.fillText('Switch', 320, 120);
-    ctx.fillStyle = Colors.background; ctx.fillRect(500, 120, 100, 100); ctx.strokeStyle = '#94a3b8'; ctx.strokeRect(500, 120, 100, 100);
-    ctx.fillStyle = Colors.text; ctx.fillText('Appliance', 550, 175);
-    ctx.beginPath(); ctx.moveTo(550, 100); ctx.lineTo(550, 120); ctx.strokeStyle = '#22c55e'; ctx.stroke();
+function getSeriesPath(W, H) {
+    var cx = W * 0.5;
+    var bw = W * 0.7, bh = H * 0.5;
+    var left = cx - bw / 2, right = cx + bw / 2;
+    var top_ = (H * 0.45) - bh / 2;
+    var bottom = (H * 0.45) + bh / 2;
+
+    return [
+        { x: left, y: bottom },
+        { x: left, y: top_ },
+        { x: left + bw * 0.33, y: top_ },
+        { x: left + bw * 0.67, y: top_ },
+        { x: right, y: top_ },
+        { x: right, y: bottom }
+    ];
 }
 
-// ===== EXPORTS =====
-window.drawStaticPotentialDivider = drawStaticPotentialDivider;
-window.drawPotentialDivider = drawPotentialDivider;
-window.drawStaticSeriesCircuit = drawStaticSeriesCircuit;
-window.drawSeriesCircuit = drawSeriesCircuit;
-window.drawStaticParallelCircuit = drawStaticParallelCircuit;
-window.drawParallelCircuit = drawParallelCircuit;
-window.drawCombinedCircuit = drawCombinedCircuit;
-window.drawSocket = drawSocket;
-window.drawDangerDemo = drawDangerDemo;
-window.drawFuseDiagram = drawFuseDiagram;
-window.drawMCBDiagram = drawMCBDiagram;
-window.drawEarthingDemo = drawEarthingDemo;
-window.drawPlugDiagram = drawPlugDiagram;
-window.drawSafetySystem = drawSafetySystem;
+function animateSeriesCircuit() {
+    if (!seriesAnimRunning) return;
 
-window.startSeriesAnimation = function() {
-    if(AnimationState.series.running) return; AnimationState.series.running = true;
-    function anim() { if(!AnimationState.series.running) return; AnimationState.series.offset += 2; drawSeriesCircuit(); requestAnimationFrame(anim); }
-    requestAnimationFrame(anim);
-};
-window.stopSeriesAnimation = function() { AnimationState.series.running = false; drawSeriesCircuit(); };
+    var canvas = document.getElementById('canvas-series');
+    if (!canvas) { seriesAnimRunning = false; return; }
 
-window.startParallelAnimation = function() {
-    if(AnimationState.parallel.running) return; AnimationState.parallel.running = true;
-    function anim() { if(!AnimationState.parallel.running) return; AnimationState.parallel.offset += 2; drawParallelCircuit(); requestAnimationFrame(anim); }
-    requestAnimationFrame(anim);
-};
-window.stopParallelAnimation = function() { AnimationState.parallel.running = false; drawParallelCircuit(); };
+    var section = document.getElementById('sec-series');
+    if (!section || !section.classList.contains('active')) {
+        seriesAnimRunning = false;
+        return;
+    }
 
-window.startCombinedAnimation = function() {
-    if(AnimationState.combined.running) return; AnimationState.combined.running = true;
-    function anim() { if(!AnimationState.combined.running) return; AnimationState.combined.offset += 2; drawCombinedCircuit(); requestAnimationFrame(anim); }
-    requestAnimationFrame(anim);
-};
-window.stopCombinedAnimation = function() { AnimationState.combined.running = false; drawCombinedCircuit(); };
+    var V = parseFloat(document.getElementById('slider-ser-v').value) || 12;
+    var R1 = parseFloat(document.getElementById('slider-ser-r1').value) || 4;
+    var R2 = parseFloat(document.getElementById('slider-ser-r2').value) || 8;
+    var Rt = R1 + R2;
+    var I = V / Rt;
+    var speedFactor = I / 1.5;
+
+    // Draw static circuit
+    drawSeriesCircuit();
+
+    var ctx = canvas.getContext('2d');
+    var W = cw(canvas), H = ch(canvas);
+    var path = getSeriesPath(W, H);
+
+    // Move and draw electrons
+    for (var i = 0; i < seriesElectrons.length; i++) {
+        var el = seriesElectrons[i];
+        el.t -= 0.002 * speedFactor;
+        if (el.t < 0) el.t += 1;
+        var pos = getPointOnPath(path, el.t);
+        drawElectron(ctx, pos.x, pos.y, 4);
+    }
+
+    seriesAnimId = requestAnimationFrame(animateSeriesCircuit);
+}
+
+function stopSeriesAnimation() {
+    seriesAnimRunning = false;
+    if (seriesAnimId) {
+        cancelAnimationFrame(seriesAnimId);
+        seriesAnimId = null;
+    }
+}
+
+
+/* ═══════════════════════════════════════
+   5. PARALLEL CIRCUIT ELECTRON ANIMATION
+   ═══════════════════════════════════════ */
+
+var parallelElectrons1 = [];
+var parallelElectrons2 = [];
+var parallelAnimId = null;
+var parallelAnimRunning = false;
+
+function startParallelAnimation() {
+    var canvas = document.getElementById('canvas-parallel');
+    if (!canvas) return;
+
+    if (parallelAnimId) cancelAnimationFrame(parallelAnimId);
+
+    parallelElectrons1 = [];
+    parallelElectrons2 = [];
+    for (var i = 0; i < 6; i++) {
+        parallelElectrons1.push({ t: i / 6 });
+    }
+    for (var j = 0; j < 4; j++) {
+        parallelElectrons2.push({ t: j / 4 });
+    }
+    parallelAnimRunning = true;
+    animateParallelCircuit();
+}
+
+function getParallelPath1(W, H) {
+    var cx = W * 0.5, cy = H * 0.48;
+    var bw = W * 0.65, bh = H * 0.6;
+    var left = cx - bw / 2, right = cx + bw / 2;
+    var top_ = cy - bh / 2, bottom = cy + bh / 2;
+    var b1y = cy - bh * 0.18;
+    var jLeft = left + bw * 0.25;
+    var jRight = left + bw * 0.75;
+
+    return [
+        { x: left, y: bottom },
+        { x: left, y: top_ },
+        { x: jLeft, y: top_ },
+        { x: jLeft, y: b1y },
+        { x: jRight, y: b1y },
+        { x: jRight, y: top_ },
+        { x: right, y: top_ },
+        { x: right, y: bottom }
+    ];
+}
+
+function getParallelPath2(W, H) {
+    var cx = W * 0.5, cy = H * 0.48;
+    var bw = W * 0.65, bh = H * 0.6;
+    var left = cx - bw / 2, right = cx + bw / 2;
+    var top_ = cy - bh / 2, bottom = cy + bh / 2;
+    var b2y = cy + bh * 0.18;
+    var jLeft = left + bw * 0.25;
+    var jRight = left + bw * 0.75;
+
+    return [
+        { x: left, y: bottom },
+        { x: left, y: top_ },
+        { x: jLeft, y: top_ },
+        { x: jLeft, y: b2y },
+        { x: jRight, y: b2y },
+        { x: jRight, y: top_ },
+        { x: right, y: top_ },
+        { x: right, y: bottom }
+    ];
+}
+
+function animateParallelCircuit() {
+    if (!parallelAnimRunning) return;
+
+    var canvas = document.getElementById('canvas-parallel');
+    if (!canvas) { parallelAnimRunning = false; return; }
+
+    var section = document.getElementById('sec-parallel');
+    if (!section || !section.classList.contains('active')) {
+        parallelAnimRunning = false;
+        return;
+    }
+
+    var V = parseFloat(document.getElementById('slider-par-v').value) || 12;
+    var R1 = parseFloat(document.getElementById('slider-par-r1').value) || 6;
+    var R2 = parseFloat(document.getElementById('slider-par-r2').value) || 12;
+    var I1 = V / R1;
+    var I2 = V / R2;
+    var maxI = Math.max(I1, I2, 1);
+
+    // Draw static circuit
+    drawParallelCircuit();
+
+    var ctx = canvas.getContext('2d');
+    var W = cw(canvas), H = ch(canvas);
+    var path1 = getParallelPath1(W, H);
+    var path2 = getParallelPath2(W, H);
+
+    // Branch 1 electrons — speed proportional to I1
+    var speed1 = 0.002 * (I1 / maxI);
+    for (var i = 0; i < parallelElectrons1.length; i++) {
+        var el1 = parallelElectrons1[i];
+        el1.t -= speed1;
+        if (el1.t < 0) el1.t += 1;
+        var pos1 = getPointOnPath(path1, el1.t);
+        drawElectron(ctx, pos1.x, pos1.y, 4);
+    }
+
+    // Branch 2 electrons — speed proportional to I2
+    var speed2 = 0.002 * (I2 / maxI);
+    for (var j = 0; j < parallelElectrons2.length; j++) {
+        var el2 = parallelElectrons2[j];
+        el2.t -= speed2;
+        if (el2.t < 0) el2.t += 1;
+        var pos2 = getPointOnPath(path2, el2.t);
+        drawElectron(ctx, pos2.x, pos2.y, 4);
+    }
+
+    parallelAnimId = requestAnimationFrame(animateParallelCircuit);
+}
+
+function stopParallelAnimation() {
+    parallelAnimRunning = false;
+    if (parallelAnimId) {
+        cancelAnimationFrame(parallelAnimId);
+        parallelAnimId = null;
+    }
+}
+
+
+/* ═══════════════════════════════════════
+   6. DIVIDER CIRCUIT ANIMATION
+   ═══════════════════════════════════════ */
+
+var dividerElectrons = [];
+var dividerAnimId = null;
+var dividerAnimRunning = false;
+
+function startDividerAnimation() {
+    var canvas = document.getElementById('canvas-divider');
+    if (!canvas) return;
+
+    if (dividerAnimId) cancelAnimationFrame(dividerAnimId);
+
+    dividerElectrons = [];
+    for (var i = 0; i < 8; i++) {
+        dividerElectrons.push({ t: i / 8 });
+    }
+    dividerAnimRunning = true;
+    animateDividerCircuit();
+}
+
+function getDividerPath(W, H) {
+    var cx = W * 0.35;
+    var batX = cx - 60;
+    var top_ = H * 0.12;
+    var bottom = H * 0.88;
+
+    return [
+        { x: batX, y: bottom },
+        { x: batX, y: top_ },
+        { x: cx, y: top_ },
+        { x: cx, y: top_ + (bottom - top_) * 0.5 },
+        { x: cx, y: bottom },
+        { x: batX, y: bottom }
+    ];
+}
+
+function animateDividerCircuit() {
+    if (!dividerAnimRunning) return;
+
+    var canvas = document.getElementById('canvas-divider');
+    if (!canvas) { dividerAnimRunning = false; return; }
+
+    var section = document.getElementById('sec-divider');
+    if (!section || !section.classList.contains('active')) {
+        dividerAnimRunning = false;
+        return;
+    }
+
+    var Vs = parseFloat(document.getElementById('slider-div-vs').value) || 12;
+    var R1 = parseFloat(document.getElementById('slider-div-r1').value) || 4;
+    var R2 = parseFloat(document.getElementById('slider-div-r2').value) || 8;
+    var I = Vs / (R1 + R2);
+    var speedFactor = I / 1;
+
+    // Draw static circuit
+    drawDividerCircuit();
+
+    var ctx = canvas.getContext('2d');
+    var W = cw(canvas), H = ch(canvas);
+    var path = getDividerPath(W, H);
+
+    for (var i = 0; i < dividerElectrons.length; i++) {
+        var el = dividerElectrons[i];
+        el.t -= 0.0015 * speedFactor;
+        if (el.t < 0) el.t += 1;
+        var pos = getPointOnPath(path, el.t);
+        drawElectron(ctx, pos.x, pos.y, 4);
+    }
+
+    dividerAnimId = requestAnimationFrame(animateDividerCircuit);
+}
+
+function stopDividerAnimation() {
+    dividerAnimRunning = false;
+    if (dividerAnimId) {
+        cancelAnimationFrame(dividerAnimId);
+        dividerAnimId = null;
+    }
+}
+
+
+/* ═══════════════════════════════════════
+   MASTER ANIMATION CONTROLLER
+   Start/stop animations based on current page
+   ═══════════════════════════════════════ */
+
+// Override the initPageInteractives to include animations
+var _originalInitPage = (typeof initPageInteractives === 'function') ? initPageInteractives : null;
+
+// We hook into the page change to manage animations
+function manageAnimations(pageId) {
+    // Stop all animations
+    stopCurrentFlowAnimation();
+    stopWaterAnimation();
+    stopSeriesAnimation();
+    stopParallelAnimation();
+    stopDividerAnimation();
+
+    if (ivAnimId) {
+        cancelAnimationFrame(ivAnimId);
+        ivAnimId = null;
+        ivAnimRunning = false;
+    }
+
+    // Start relevant animation
+    switch (pageId) {
+        case 'current':
+            setTimeout(startCurrentFlowAnimation, 200);
+            break;
+        case 'pd':
+            setTimeout(startWaterAnimation, 200);
+            break;
+        case 'nonohmic':
+            setTimeout(function () { drawIVGraph(); }, 200);
+            break;
+        case 'series':
+            setTimeout(startSeriesAnimation, 200);
+            break;
+        case 'parallel':
+            setTimeout(startParallelAnimation, 200);
+            break;
+        case 'divider':
+            setTimeout(startDividerAnimation, 200);
+            break;
+    }
+}
+
+// Patch into goTo function — listen for page changes
+(function () {
+    var originalGoTo = window.goTo;
+    window.goTo = function (pageId, animate) {
+        if (typeof originalGoTo === 'function') {
+            originalGoTo(pageId, animate);
+        }
+        // Manage animations after page change
+        setTimeout(function () {
+            manageAnimations(pageId);
+        }, 250);
+    };
+})();
+
+// Start animation for initial page
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
+        manageAnimations(currentPage || 'welcome');
+    }, 500);
+});

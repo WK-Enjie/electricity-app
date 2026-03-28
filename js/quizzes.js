@@ -1,1529 +1,649 @@
-// ========================================
-// SINGAPORE O-LEVEL ELECTRICITY APP
-// Quiz System - quizzes.js
-// ========================================
+/* ═══════════════════════════════════════════════════════════════
+   ⚡ ELECTRICITY EXPLORER — quizzes.js
+   Quiz engine with 3 question banks:
+     • Quiz 1: Current Electricity (current, PD, EMF, resistance, non-ohmic)
+     • Quiz 2: DC Circuits (series, parallel, potential divider)
+     • Quiz 3: Practical Electricity (power, energy, cost, safety)
+   ═══════════════════════════════════════════════════════════════ */
 
-// ===== QUIZ STATE =====
-const QuizState = {
-    mode: null, // 'topic', 'mixed', 'timed', 'circuit'
-    topic: null,
-    difficulty: 'medium',
-    questions: [],
-    currentIndex: 0,
-    answers: [],
-    score: 0,
-    startTime: null,
-    timeLimit: null,
-    timerInterval: null,
-    isComplete: false
-};
 
-// ===== QUIZ STATISTICS =====
-let QuizStats = {
-    totalQuizzes: 0,
-    totalCorrect: 0,
-    totalQuestions: 0,
-    bestScore: 0,
-    currentStreak: 0,
-    topicScores: {
-        current: { correct: 0, total: 0 },
-        resistance: { correct: 0, total: 0 },
-        nonohmic: { correct: 0, total: 0 },
-        circuits: { correct: 0, total: 0 },
-        divider: { correct: 0, total: 0 },
-        power: { correct: 0, total: 0 },
-        safety: { correct: 0, total: 0 }
-    }
-};
+/* ═══════════════════════════════════════
+   QUESTION BANKS
+   ═══════════════════════════════════════ */
 
-// ===== QUESTION BANK =====
-const QuestionBank = {
-    current: [
+var quizData = {
+
+    /* ─────────────────────────────────
+       QUIZ 1: CURRENT ELECTRICITY
+       ───────────────────────────────── */
+    quiz1: [
         {
-            id: 'cur1',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'Electric current is defined as:',
-            options: [
-                'The rate of flow of charge',
-                'The force that moves electrons',
-                'The resistance to electron flow',
-                'The energy carried by electrons'
+            q: "Electric current is defined as the:",
+            opts: [
+                "A) Force on a charge in an electric field",
+                "B) Rate of flow of electric charge",
+                "C) Energy carried by electrons",
+                "D) Resistance per unit length of wire"
             ],
-            correct: 0,
-            explanation: 'Electric current is defined as the rate of flow of electric charge. The formula is I = Q/t, where I is current in amperes, Q is charge in coulombs, and t is time in seconds.'
+            ans: 1,
+            explain: "Electric current is the <strong>rate of flow of electric charge</strong>. Mathematically, I = Q / t, measured in amperes (A)."
         },
         {
-            id: 'cur2',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'What is the SI unit of electric current?',
-            options: ['Volt (V)', 'Ampere (A)', 'Ohm (Ω)', 'Watt (W)'],
-            correct: 1,
-            explanation: 'The SI unit of electric current is the Ampere (A). 1 Ampere = 1 Coulomb per second.'
-        },
-        {
-            id: 'cur3',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'If 60 C of charge flows through a wire in 20 seconds, what is the current?',
-            options: ['1200 A', '3 A', '40 A', '0.33 A'],
-            correct: 1,
-            explanation: 'Using I = Q/t: I = 60 C ÷ 20 s = 3 A'
-        },
-        {
-            id: 'cur4',
-            type: 'fill-blank',
-            difficulty: 'medium',
-            question: 'A current of 2.5 A flows for 4 minutes. The charge that passes is ___ C.',
-            answer: 600,
-            tolerance: 0,
-            explanation: 'Q = I × t = 2.5 A × (4 × 60 s) = 2.5 × 240 = 600 C'
-        },
-        {
-            id: 'cur5',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'Conventional current flows from:',
-            options: [
-                'Negative to positive terminal',
-                'Positive to negative terminal',
-                'In both directions equally',
-                'Only through resistors'
+            q: "A charge of 15 C flows through a point in a circuit in 5 seconds. What is the current?",
+            opts: [
+                "A) 75 A",
+                "B) 0.33 A",
+                "C) 3.0 A",
+                "D) 20 A"
             ],
-            correct: 1,
-            explanation: 'Conventional current flows from the positive terminal to the negative terminal. This is opposite to the actual direction of electron flow.'
+            ans: 2,
+            explain: "I = Q / t = 15 / 5 = <strong>3.0 A</strong>."
         },
         {
-            id: 'cur6',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'An ammeter should be connected in:',
-            options: [
-                'Parallel with the component',
-                'Series with the component',
-                'Either series or parallel',
-                'Outside the circuit'
+            q: "In which direction does conventional current flow?",
+            opts: [
+                "A) From negative terminal to positive terminal",
+                "B) From positive terminal to negative terminal",
+                "C) In the same direction as electron flow",
+                "D) It depends on the type of circuit"
             ],
-            correct: 1,
-            explanation: 'An ammeter must be connected in SERIES with the component to measure the current flowing through it. It has very low resistance to minimize its effect on the circuit.'
+            ans: 1,
+            explain: "Conventional current flows from <strong>positive to negative</strong> terminal. This is opposite to the actual electron flow (negative to positive)."
         },
         {
-            id: 'cur7',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'Potential difference is measured in:',
-            options: ['Amperes', 'Ohms', 'Volts', 'Watts'],
-            correct: 2,
-            explanation: 'Potential difference (voltage) is measured in Volts (V). 1 Volt = 1 Joule per Coulomb.'
+            q: "An ammeter is connected in _____ with a component and has _____ resistance.",
+            opts: [
+                "A) parallel; very high",
+                "B) series; very high",
+                "C) parallel; very low",
+                "D) series; very low"
+            ],
+            ans: 3,
+            explain: "An ammeter must be in <strong>series</strong> to measure the current flowing through the component, and it must have <strong>very low resistance</strong> so it does not significantly affect the current."
         },
         {
-            id: 'cur8',
-            type: 'fill-blank',
-            difficulty: 'hard',
-            question: 'If 24 J of work is done to move 6 C of charge, the potential difference is ___ V.',
-            answer: 4,
-            tolerance: 0,
-            explanation: 'Using V = W/Q: V = 24 J ÷ 6 C = 4 V'
+            q: "The potential difference across a component is defined as the:",
+            opts: [
+                "A) Total charge flowing per second",
+                "B) Energy converted from electrical to other forms per unit charge",
+                "C) Total resistance of the circuit",
+                "D) Force acting on each electron"
+            ],
+            ans: 1,
+            explain: "Potential difference (V) is the <strong>energy converted from electrical energy to other forms per unit charge</strong> passing between two points. V = W / Q."
+        },
+        {
+            q: "A voltmeter should be connected in _____ with a component.",
+            opts: [
+                "A) series",
+                "B) parallel",
+                "C) any orientation",
+                "D) alternating positions"
+            ],
+            ans: 1,
+            explain: "A voltmeter is connected in <strong>parallel</strong> across the component to measure the potential difference. It has very high resistance to avoid drawing significant current."
+        },
+        {
+            q: "Which statement correctly distinguishes e.m.f. from p.d.?",
+            opts: [
+                "A) E.m.f. is measured across a component; p.d. is measured across the source",
+                "B) E.m.f. converts electrical energy to other forms; p.d. converts other forms to electrical",
+                "C) E.m.f. is energy converted to electrical per unit charge; p.d. is energy converted from electrical per unit charge",
+                "D) There is no difference between e.m.f. and p.d."
+            ],
+            ans: 2,
+            explain: "E.m.f. (ε) is the energy converted from other forms <strong>to electrical energy</strong> per unit charge by the source. P.d. (V) is the energy converted <strong>from electrical energy</strong> to other forms per unit charge across a component."
+        },
+        {
+            q: "A battery has an e.m.f. of 6.0 V and internal resistance of 0.5 Ω. When connected to a 5.5 Ω resistor, what is the terminal p.d.?",
+            opts: [
+                "A) 6.0 V",
+                "B) 5.5 V",
+                "C) 5.0 V",
+                "D) 0.5 V"
+            ],
+            ans: 1,
+            explain: "I = ε / (R + r) = 6.0 / (5.5 + 0.5) = 1.0 A. Terminal p.d. = ε − Ir = 6.0 − (1.0)(0.5) = <strong>5.5 V</strong>."
+        },
+        {
+            q: "The resistance of a wire increases when:",
+            opts: [
+                "A) Its length decreases",
+                "B) Its cross-sectional area increases",
+                "C) Its temperature increases (for metallic conductors)",
+                "D) A smaller current flows through it"
+            ],
+            ans: 2,
+            explain: "For metallic conductors, resistance <strong>increases with temperature</strong>. Higher temperature causes more lattice vibrations, impeding electron flow. R also increases with length and decreases with cross-sectional area."
+        },
+        {
+            q: "Which I–V graph represents a filament lamp?",
+            opts: [
+                "A) A straight line through the origin",
+                "B) A curve that bends towards the V-axis (gradient decreasing)",
+                "C) A horizontal line",
+                "D) A vertical line at 0.7 V then a sharp rise"
+            ],
+            ans: 1,
+            explain: "A filament lamp has a <strong>curve bending towards the V-axis</strong>. As current increases, the filament heats up → resistance increases → gradient of I–V graph decreases. Option D describes a semiconductor diode."
         }
     ],
-    
-    resistance: [
+
+    /* ─────────────────────────────────
+       QUIZ 2: DC CIRCUITS
+       ───────────────────────────────── */
+    quiz2: [
         {
-            id: 'res1',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'Resistance is measured in:',
-            options: ['Volts', 'Amperes', 'Ohms', 'Watts'],
-            correct: 2,
-            explanation: 'Resistance is measured in Ohms (Ω). 1 Ohm = 1 Volt per Ampere.'
-        },
-        {
-            id: 'res2',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'According to Ohm\'s Law, current is:',
-            options: [
-                'Directly proportional to resistance',
-                'Inversely proportional to voltage',
-                'Directly proportional to voltage (at constant temperature)',
-                'Not related to voltage or resistance'
+            q: "In a series circuit, which quantity is the same through all components?",
+            opts: [
+                "A) Voltage",
+                "B) Resistance",
+                "C) Current",
+                "D) Power"
             ],
-            correct: 2,
-            explanation: 'Ohm\'s Law states that current is directly proportional to voltage, provided temperature and other physical conditions remain constant. I = V/R.'
+            ans: 2,
+            explain: "In a series circuit, the <strong>current is the same</strong> at every point. I = I₁ = I₂ = I₃."
         },
         {
-            id: 'res3',
-            type: 'fill-blank',
-            difficulty: 'medium',
-            question: 'A resistor has 6 V across it and 0.5 A flowing through it. Its resistance is ___ Ω.',
-            answer: 12,
-            tolerance: 0,
-            explanation: 'Using R = V/I: R = 6 V ÷ 0.5 A = 12 Ω'
-        },
-        {
-            id: 'res4',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'If the length of a wire is doubled, its resistance will:',
-            options: [
-                'Halve',
-                'Double',
-                'Stay the same',
-                'Quadruple'
+            q: "Two resistors of 6 Ω and 12 Ω are connected in series to a 9 V battery. What is the total resistance?",
+            opts: [
+                "A) 4 Ω",
+                "B) 18 Ω",
+                "C) 2 Ω",
+                "D) 72 Ω"
             ],
-            correct: 1,
-            explanation: 'Resistance is directly proportional to length (R ∝ L). If length doubles, resistance doubles.'
+            ans: 1,
+            explain: "In series: R_total = R₁ + R₂ = 6 + 12 = <strong>18 Ω</strong>."
         },
         {
-            id: 'res5',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'If the cross-sectional area of a wire is doubled, its resistance will:',
-            options: [
-                'Halve',
-                'Double',
-                'Stay the same',
-                'Quadruple'
+            q: "In a parallel circuit, which quantity is the same across all branches?",
+            opts: [
+                "A) Current",
+                "B) Resistance",
+                "C) Potential difference",
+                "D) Charge"
             ],
-            correct: 0,
-            explanation: 'Resistance is inversely proportional to cross-sectional area (R ∝ 1/A). If area doubles, resistance halves.'
+            ans: 2,
+            explain: "In a parallel circuit, the <strong>p.d. across each branch is the same</strong>. V = V₁ = V₂ = V₃."
         },
         {
-            id: 'res6',
-            type: 'calculation',
-            difficulty: 'hard',
-            question: 'Calculate the current flowing through a 25 Ω resistor when connected to a 10 V supply.',
-            given: { V: '10 V', R: '25 Ω' },
-            find: 'I',
-            answer: 0.4,
-            unit: 'A',
-            tolerance: 0.01,
-            explanation: 'Using I = V/R: I = 10 V ÷ 25 Ω = 0.4 A'
+            q: "Two resistors of 6 Ω and 12 Ω are connected in parallel. What is the combined resistance?",
+            opts: [
+                "A) 18 Ω",
+                "B) 4 Ω",
+                "C) 2 Ω",
+                "D) 72 Ω"
+            ],
+            ans: 1,
+            explain: "In parallel: 1/R_T = 1/6 + 1/12 = 2/12 + 1/12 = 3/12 → R_T = 12/3 = <strong>4 Ω</strong>. Note: combined resistance in parallel is always less than the smallest individual resistance."
+        },
+        {
+            q: "In a series circuit with a 12 V battery, R₁ = 4 Ω and R₂ = 8 Ω. What is the voltage across R₂?",
+            opts: [
+                "A) 4 V",
+                "B) 8 V",
+                "C) 12 V",
+                "D) 6 V"
+            ],
+            ans: 1,
+            explain: "I = V / R_T = 12 / 12 = 1 A. V₂ = IR₂ = 1 × 8 = <strong>8 V</strong>. Alternatively, V₂ = R₂/(R₁+R₂) × V = 8/12 × 12 = 8 V."
+        },
+        {
+            q: "The potential divider formula states that V₁/V₂ equals:",
+            opts: [
+                "A) R₂ / R₁",
+                "B) R₁ / R₂",
+                "C) R₁ × R₂",
+                "D) (R₁ + R₂) / R₁"
+            ],
+            ans: 1,
+            explain: "In a potential divider, the voltage across each resistor is proportional to its resistance: <strong>V₁/V₂ = R₁/R₂</strong>. The larger resistor gets the larger share of the voltage."
+        },
+        {
+            q: "In a potential divider with Vs = 10 V, R₁ = 3 kΩ and R₂ = 7 kΩ, what is V₂ (across R₂)?",
+            opts: [
+                "A) 3 V",
+                "B) 7 V",
+                "C) 10 V",
+                "D) 4.3 V"
+            ],
+            ans: 1,
+            explain: "V₂ = R₂/(R₁+R₂) × Vs = 7/(3+7) × 10 = 7/10 × 10 = <strong>7 V</strong>."
+        },
+        {
+            q: "A thermistor is placed in series with a fixed resistor in a potential divider. When temperature increases, what happens to the output voltage across the fixed resistor?",
+            opts: [
+                "A) It decreases",
+                "B) It increases",
+                "C) It stays the same",
+                "D) It drops to zero"
+            ],
+            ans: 1,
+            explain: "Temperature ↑ → Thermistor resistance ↓ → Its share of voltage ↓ → Voltage across fixed resistor <strong>increases</strong> (since total voltage is constant)."
+        },
+        {
+            q: "In a parallel circuit with a 6 V supply, R₁ = 3 Ω and R₂ = 6 Ω. What is the total current drawn from the supply?",
+            opts: [
+                "A) 1 A",
+                "B) 2 A",
+                "C) 3 A",
+                "D) 9 A"
+            ],
+            ans: 2,
+            explain: "I₁ = V/R₁ = 6/3 = 2 A. I₂ = V/R₂ = 6/6 = 1 A. I_total = I₁ + I₂ = 2 + 1 = <strong>3 A</strong>."
+        },
+        {
+            q: "An LDR (Light Dependent Resistor) is used in a potential divider circuit. When the light intensity increases, the resistance of the LDR:",
+            opts: [
+                "A) Increases",
+                "B) Decreases",
+                "C) Remains unchanged",
+                "D) Becomes infinite"
+            ],
+            ans: 1,
+            explain: "When light intensity increases, the resistance of an LDR <strong>decreases</strong>. More photons free more charge carriers, reducing resistance."
         }
     ],
-    
-    nonohmic: [
+
+    /* ─────────────────────────────────
+       QUIZ 3: PRACTICAL ELECTRICITY
+       ───────────────────────────────── */
+    quiz3: [
         {
-            id: 'non1',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'Which of the following is an ohmic conductor?',
-            options: [
-                'Filament lamp',
-                'Diode',
-                'Metal wire at constant temperature',
-                'Thermistor'
+            q: "The formula for electrical power is:",
+            opts: [
+                "A) P = V / I",
+                "B) P = I / V",
+                "C) P = V × I",
+                "D) P = V + I"
             ],
-            correct: 2,
-            explanation: 'A metal wire at constant temperature is an ohmic conductor because it obeys Ohm\'s Law - current is directly proportional to voltage.'
+            ans: 2,
+            explain: "Electrical power <strong>P = V × I</strong>. It can also be expressed as P = I²R or P = V²/R."
         },
         {
-            id: 'non2',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'As current through a filament lamp increases, its resistance:',
-            options: [
-                'Decreases',
-                'Increases',
-                'Stays constant',
-                'Becomes zero'
+            q: "A 240 V kettle draws a current of 10 A. What is its power rating?",
+            opts: [
+                "A) 24 W",
+                "B) 2400 W",
+                "C) 250 W",
+                "D) 2.4 W"
             ],
-            correct: 1,
-            explanation: 'As current increases, the filament heats up. Higher temperature causes more atomic vibrations, leading to more collisions with electrons, thus increasing resistance.'
+            ans: 1,
+            explain: "P = V × I = 240 × 10 = <strong>2400 W</strong> (or 2.4 kW)."
         },
         {
-            id: 'non3',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'A diode allows current to flow in:',
-            options: [
-                'Both directions equally',
-                'One direction only',
-                'No direction',
-                'Both directions but differently'
+            q: "The formula for electrical energy consumed is:",
+            opts: [
+                "A) E = P / t",
+                "B) E = P × t",
+                "C) E = P × V",
+                "D) E = I × R"
             ],
-            correct: 1,
-            explanation: 'A diode allows current to flow in one direction only - from anode to cathode (forward bias). In reverse bias, it blocks current flow.'
+            ans: 1,
+            explain: "Electrical energy <strong>E = P × t</strong>, which can also be written as E = V × I × t."
         },
         {
-            id: 'non4',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'For a silicon diode, current starts to flow significantly when the forward voltage exceeds approximately:',
-            options: ['0.3 V', '0.7 V', '1.5 V', '3.0 V'],
-            correct: 1,
-            explanation: 'Silicon diodes have a threshold (forward) voltage of approximately 0.7 V. Below this, very little current flows.'
-        },
-        {
-            id: 'non5',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'NTC thermistor resistance _____ as temperature increases.',
-            options: ['Increases', 'Decreases', 'Stays the same', 'Becomes infinite'],
-            correct: 1,
-            explanation: 'NTC (Negative Temperature Coefficient) thermistors have decreasing resistance as temperature increases. More electrons are freed at higher temperatures.'
-        },
-        {
-            id: 'non6',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'LDR resistance _____ as light intensity increases.',
-            options: ['Increases', 'Decreases', 'Stays the same', 'Fluctuates'],
-            correct: 1,
-            explanation: 'LDR (Light Dependent Resistor) resistance decreases as light intensity increases. Light photons free more electrons, reducing resistance.'
-        },
-        {
-            id: 'non7',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'Which component would you use in an automatic street light that turns on when it gets dark?',
-            options: ['Thermistor', 'LDR', 'Diode', 'Variable resistor'],
-            correct: 1,
-            explanation: 'An LDR would be used because its resistance changes with light level. In darkness, its high resistance can be used to trigger the light.'
-        },
-        {
-            id: 'non8',
-            type: 'multiple-choice',
-            difficulty: 'hard',
-            question: 'The I-V graph of a filament lamp is:',
-            options: [
-                'A straight line through the origin',
-                'A curve that gets steeper as V increases',
-                'A curve that gets less steep as V increases',
-                'A horizontal line'
+            q: "A 2 kW heater is used for 3 hours. How much energy does it consume in kWh?",
+            opts: [
+                "A) 6 kWh",
+                "B) 0.67 kWh",
+                "C) 6000 kWh",
+                "D) 1.5 kWh"
             ],
-            correct: 2,
-            explanation: 'The I-V graph curves and gets less steep because as V increases, the filament heats up, resistance increases, and current increases at a slower rate.'
-        }
-    ],
-    
-    circuits: [
+            ans: 0,
+            explain: "Energy = Power × Time = 2 kW × 3 h = <strong>6 kWh</strong>."
+        },
         {
-            id: 'cir1',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'In a series circuit, the current:',
-            options: [
-                'Is different through each component',
-                'Is the same through all components',
-                'Is zero',
-                'Depends on the voltage only'
+            q: "If 1 kWh of electricity costs $0.33, what is the cost of running a 500 W fan for 10 hours?",
+            opts: [
+                "A) $1.65",
+                "B) $16.50",
+                "C) $0.165",
+                "D) $3.30"
             ],
-            correct: 1,
-            explanation: 'In a series circuit, there is only one path for current to flow, so the same current flows through all components.'
+            ans: 0,
+            explain: "Energy = 0.5 kW × 10 h = 5 kWh. Cost = 5 × $0.33 = <strong>$1.65</strong>."
         },
         {
-            id: 'cir2',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'In a parallel circuit, the voltage:',
-            options: [
-                'Is different across each branch',
-                'Is the same across all branches',
-                'Is zero in all branches',
-                'Adds up across all branches'
+            q: "Which of the following is a danger of using electricity in damp conditions?",
+            opts: [
+                "A) The circuit becomes more efficient",
+                "B) Water conducts electricity, increasing the risk of electric shock",
+                "C) It reduces the current in the circuit",
+                "D) It increases the resistance of all components"
             ],
-            correct: 1,
-            explanation: 'In a parallel circuit, all branches are connected across the same two points, so they all have the same voltage across them.'
+            ans: 1,
+            explain: "Water conducts electricity. Damp conditions create unintended conducting paths through the body, greatly increasing the risk of <strong>electric shock</strong>."
         },
         {
-            id: 'cir3',
-            type: 'fill-blank',
-            difficulty: 'medium',
-            question: 'Two resistors of 10 Ω and 20 Ω are connected in series. The total resistance is ___ Ω.',
-            answer: 30,
-            tolerance: 0,
-            explanation: 'For series resistors: R_total = R₁ + R₂ = 10 + 20 = 30 Ω'
-        },
-        {
-            id: 'cir4',
-            type: 'fill-blank',
-            difficulty: 'hard',
-            question: 'Two resistors of 6 Ω and 12 Ω are connected in parallel. The total resistance is ___ Ω.',
-            answer: 4,
-            tolerance: 0,
-            explanation: 'For parallel resistors: 1/R = 1/R₁ + 1/R₂ = 1/6 + 1/12 = 3/12 = 1/4, so R = 4 Ω. Or use (R₁×R₂)/(R₁+R₂) = (6×12)/(6+12) = 72/18 = 4 Ω'
-        },
-        {
-            id: 'cir5',
-            type: 'calculation',
-            difficulty: 'medium',
-            question: 'A 12 V battery is connected to two resistors of 20 Ω and 40 Ω in series. Calculate the current.',
-            given: { V: '12 V', R1: '20 Ω', R2: '40 Ω' },
-            find: 'I',
-            answer: 0.2,
-            unit: 'A',
-            tolerance: 0.01,
-            explanation: 'Total R = 20 + 40 = 60 Ω. I = V/R = 12/60 = 0.2 A'
-        },
-        {
-            id: 'cir6',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'When more resistors are added in parallel, the total resistance:',
-            options: [
-                'Increases',
-                'Decreases',
-                'Stays the same',
-                'Becomes infinite'
+            q: "A fuse should be connected in the:",
+            opts: [
+                "A) Neutral wire",
+                "B) Earth wire",
+                "C) Live wire",
+                "D) Any wire"
             ],
-            correct: 1,
-            explanation: 'Adding resistors in parallel provides more paths for current, decreasing total resistance. Total resistance is always less than the smallest individual resistor.'
+            ans: 2,
+            explain: "The fuse must be in the <strong>live wire</strong>. When it blows, it disconnects the appliance from the high-voltage supply, making it safe."
         },
         {
-            id: 'cir7',
-            type: 'multiple-choice',
-            difficulty: 'hard',
-            question: 'In a parallel circuit, more current flows through:',
-            options: [
-                'The larger resistance',
-                'The smaller resistance',
-                'Equal current through all resistors',
-                'No current flows in parallel'
+            q: "A 2000 W appliance operates at 250 V. What fuse rating should be used? (Available: 3 A, 5 A, 13 A)",
+            opts: [
+                "A) 3 A",
+                "B) 5 A",
+                "C) 13 A",
+                "D) 20 A"
             ],
-            correct: 1,
-            explanation: 'Since V is the same across parallel branches, and I = V/R, more current flows through the path with smaller resistance.'
-        }
-    ],
-    
-    divider: [
+            ans: 2,
+            explain: "I = P / V = 2000 / 250 = 8 A. The fuse must be rated slightly above 8 A. The next standard rating is <strong>13 A</strong>."
+        },
         {
-            id: 'div1',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'A potential divider is used to:',
-            options: [
-                'Increase voltage',
-                'Obtain a fraction of the input voltage',
-                'Convert AC to DC',
-                'Measure current'
+            q: "What is the purpose of the earth wire in a 3-pin plug?",
+            opts: [
+                "A) To carry current to the appliance",
+                "B) To return current to the supply",
+                "C) To provide a low-resistance path to ground in case of a fault, so the fuse blows",
+                "D) To increase the power of the appliance"
             ],
-            correct: 1,
-            explanation: 'A potential divider uses two resistors in series to divide the input voltage and obtain a smaller output voltage.'
+            ans: 2,
+            explain: "The earth wire connects the metal casing to the ground. If the live wire touches the casing, a large current flows through the earth wire → <strong>fuse blows</strong> → circuit breaks → user is protected."
         },
         {
-            id: 'div2',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'In a potential divider with R₁ = R₂, the output voltage (across R₂) is:',
-            options: [
-                'Equal to input voltage',
-                'Half of input voltage',
-                'Zero',
-                'Double the input voltage'
+            q: "Overloading a circuit is dangerous because:",
+            opts: [
+                "A) It causes the voltage to increase",
+                "B) It reduces the current in the wires",
+                "C) Excessive current causes wires to overheat, which may start a fire",
+                "D) It causes the earth wire to melt"
             ],
-            correct: 1,
-            explanation: 'When R₁ = R₂, Vout = Vin × R₂/(R₁+R₂) = Vin × R/(2R) = Vin/2 = half of input voltage.'
-        },
-        {
-            id: 'div3',
-            type: 'fill-blank',
-            difficulty: 'medium',
-            question: 'In a potential divider with Vin = 9V, R₁ = 20kΩ, R₂ = 10kΩ, the output voltage is ___ V.',
-            answer: 3,
-            tolerance: 0,
-            explanation: 'Vout = Vin × R₂/(R₁+R₂) = 9 × 10/(20+10) = 9 × 10/30 = 3 V'
-        },
-        {
-            id: 'div4',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'If an NTC thermistor is used as R₂ in a potential divider, when temperature increases, Vout will:',
-            options: [
-                'Increase',
-                'Decrease',
-                'Stay the same',
-                'Become zero'
-            ],
-            correct: 1,
-            explanation: 'When temperature increases, NTC thermistor resistance decreases. Since Vout = Vin × R₂/(R₁+R₂), if R₂ decreases, Vout decreases.'
-        },
-        {
-            id: 'div5',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'If an LDR is used as R₂ in a potential divider, when light intensity increases, Vout will:',
-            options: [
-                'Increase',
-                'Decrease',
-                'Stay the same',
-                'Fluctuate'
-            ],
-            correct: 1,
-            explanation: 'When light increases, LDR resistance decreases. Since Vout ∝ R₂, Vout decreases when R₂ decreases.'
-        },
-        {
-            id: 'div6',
-            type: 'calculation',
-            difficulty: 'hard',
-            question: 'Design a potential divider to give 4V output from a 12V supply. If R₁ = 20kΩ, what should R₂ be?',
-            given: { Vin: '12 V', Vout: '4 V', R1: '20 kΩ' },
-            find: 'R₂',
-            answer: 10,
-            unit: 'kΩ',
-            tolerance: 0.1,
-            explanation: '4 = 12 × R₂/(20+R₂). 4(20+R₂) = 12R₂. 80+4R₂ = 12R₂. 80 = 8R₂. R₂ = 10 kΩ'
-        }
-    ],
-    
-    power: [
-        {
-            id: 'pow1',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'Electrical power is measured in:',
-            options: ['Volts', 'Amperes', 'Watts', 'Joules'],
-            correct: 2,
-            explanation: 'Electrical power is measured in Watts (W). 1 Watt = 1 Joule per second = 1 Volt × 1 Ampere.'
-        },
-        {
-            id: 'pow2',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'The formula for electrical power is:',
-            options: ['P = I/V', 'P = V/I', 'P = V × I', 'P = V + I'],
-            correct: 2,
-            explanation: 'Electrical power P = V × I (voltage × current). This can also be written as P = I²R or P = V²/R.'
-        },
-        {
-            id: 'pow3',
-            type: 'fill-blank',
-            difficulty: 'medium',
-            question: 'A device operates at 230 V and draws 2 A. Its power rating is ___ W.',
-            answer: 460,
-            tolerance: 0,
-            explanation: 'P = V × I = 230 × 2 = 460 W'
-        },
-        {
-            id: 'pow4',
-            type: 'fill-blank',
-            difficulty: 'medium',
-            question: 'An appliance rated 2300 W operates at 230 V. The current drawn is ___ A.',
-            answer: 10,
-            tolerance: 0,
-            explanation: 'I = P/V = 2300/230 = 10 A'
-        },
-        {
-            id: 'pow5',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: '1 kilowatt-hour (kWh) is equal to:',
-            options: ['1000 J', '3600 J', '1,000,000 J', '3,600,000 J'],
-            correct: 3,
-            explanation: '1 kWh = 1000 W × 3600 s = 3,600,000 J = 3.6 MJ'
-        },
-        {
-            id: 'pow6',
-            type: 'calculation',
-            difficulty: 'hard',
-            question: 'A 1500 W air conditioner runs for 8 hours per day. Calculate the daily energy consumption in kWh.',
-            given: { P: '1500 W', t: '8 hours' },
-            find: 'E',
-            answer: 12,
-            unit: 'kWh',
-            tolerance: 0.1,
-            explanation: 'E = P × t = 1.5 kW × 8 h = 12 kWh'
-        },
-        {
-            id: 'pow7',
-            type: 'calculation',
-            difficulty: 'hard',
-            question: 'If electricity costs $0.32 per kWh, calculate the cost of running a 2000 W heater for 5 hours.',
-            given: { P: '2000 W', t: '5 hours', rate: '$0.32/kWh' },
-            find: 'Cost',
-            answer: 3.20,
-            unit: '$',
-            tolerance: 0.01,
-            explanation: 'Energy = 2 kW × 5 h = 10 kWh. Cost = 10 × $0.32 = $3.20'
-        }
-    ],
-    
-    safety: [
-        {
-            id: 'saf1',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'The live wire in a UK/Singapore 3-pin plug is colored:',
-            options: ['Blue', 'Brown', 'Green and Yellow', 'Red'],
-            correct: 1,
-            explanation: 'The live wire is BROWN. Remember: BRowN = Bottom Right when looking at plug from front.'
-        },
-        {
-            id: 'saf2',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'The neutral wire is colored:',
-            options: ['Brown', 'Blue', 'Green and Yellow', 'Black'],
-            correct: 1,
-            explanation: 'The neutral wire is BLUE. Remember: BLue = Bottom Left when looking at plug from front.'
-        },
-        {
-            id: 'saf3',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'The earth wire is colored:',
-            options: ['Brown', 'Blue', 'Green and Yellow striped', 'Red'],
-            correct: 2,
-            explanation: 'The earth wire is GREEN and YELLOW striped. It connects to the top (longest) pin.'
-        },
-        {
-            id: 'saf4',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'A fuse should be connected in the:',
-            options: [
-                'Neutral wire',
-                'Earth wire',
-                'Live wire',
-                'Any wire'
-            ],
-            correct: 2,
-            explanation: 'The fuse must be in the LIVE wire so that when it blows, the appliance is disconnected from the high voltage supply.'
-        },
-        {
-            id: 'saf5',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'The purpose of the earth wire is to:',
-            options: [
-                'Complete the circuit',
-                'Provide a safe path for fault current',
-                'Increase resistance',
-                'Reduce voltage'
-            ],
-            correct: 1,
-            explanation: 'The earth wire provides a low-resistance path for current if a fault occurs (live wire touching metal case), causing the fuse to blow quickly.'
-        },
-        {
-            id: 'saf6',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'A short circuit occurs when:',
-            options: [
-                'Current is too low',
-                'Live and neutral wires touch directly',
-                'The fuse is too large',
-                'The circuit is too long'
-            ],
-            correct: 1,
-            explanation: 'A short circuit occurs when live and neutral wires come into direct contact, bypassing the load. This causes very high current to flow.'
-        },
-        {
-            id: 'saf7',
-            type: 'multiple-choice',
-            difficulty: 'easy',
-            question: 'Double-insulated appliances:',
-            options: [
-                'Need an earth wire',
-                'Do not need an earth wire',
-                'Are not safe',
-                'Use higher voltage'
-            ],
-            correct: 1,
-            explanation: 'Double-insulated appliances have a plastic casing that cannot become live, so they don\'t need an earth wire. They use 2-core cables.'
-        },
-        {
-            id: 'saf8',
-            type: 'fill-blank',
-            difficulty: 'hard',
-            question: 'An appliance rated 2000 W at 230 V should use a fuse rated at ___ A (choose from 3A, 5A, or 13A).',
-            answer: 13,
-            tolerance: 0,
-            explanation: 'Current = P/V = 2000/230 = 8.7 A. Choose a fuse slightly higher: 13 A (not 3A or 5A as these are too low).'
-        },
-        {
-            id: 'saf9',
-            type: 'multiple-choice',
-            difficulty: 'medium',
-            question: 'The mains voltage in Singapore is:',
-            options: ['110 V', '220 V', '230 V', '240 V'],
-            correct: 2,
-            explanation: 'Singapore uses 230 V AC mains supply at 50 Hz frequency.'
-        },
-        {
-            id: 'saf10',
-            type: 'multiple-choice',
-            difficulty: 'hard',
-            question: 'Why is the earth pin longest in a 3-pin plug?',
-            options: [
-                'To make it easier to insert',
-                'So earth connects first and disconnects last',
-                'To carry more current',
-                'For aesthetic reasons'
-            ],
-            correct: 1,
-            explanation: 'The earth pin is longest so it connects FIRST when inserting (safety established) and disconnects LAST when removing (safety maintained longest).'
+            ans: 2,
+            explain: "Too many high-power appliances on one circuit → <strong>excessive current</strong> → wires overheat beyond safe limits → insulation melts → <strong>fire hazard</strong>."
         }
     ]
 };
 
-// ===== INITIALIZATION =====
 
-function initQuizSection() {
-    loadQuizStats();
-    updateStatsDisplay();
-    initDifficultyButtons();
-    console.log('Quiz section initialized');
-}
+/* ═══════════════════════════════════════
+   QUIZ STATE
+   ═══════════════════════════════════════ */
 
-function initDifficultyButtons() {
-    const diffButtons = document.querySelectorAll('.diff-btn');
-    diffButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            diffButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            QuizState.difficulty = btn.dataset.difficulty;
-        });
-    });
-}
+var quizState = {
+    quiz1: { rendered: false, answered: 0, correct: 0, answers: {} },
+    quiz2: { rendered: false, answered: 0, correct: 0, answers: {} },
+    quiz3: { rendered: false, answered: 0, correct: 0, answers: {} }
+};
 
-// ===== START QUIZ FUNCTIONS =====
 
-function startTopicQuiz() {
-    const topic = document.getElementById('topicSelect').value;
-    QuizState.mode = 'topic';
-    QuizState.topic = topic;
-    QuizState.difficulty = null; // All difficulties
-    
-    const questions = getQuestionsForTopic(topic, 10);
-    startQuiz(questions, getTopicName(topic));
-}
+/* ═══════════════════════════════════════
+   QUIZ INITIALIZATION
+   ═══════════════════════════════════════ */
 
-function startMixedQuiz() {
-    QuizState.mode = 'mixed';
-    QuizState.topic = null;
-    
-    const questions = getMixedQuestions(10, QuizState.difficulty);
-    startQuiz(questions, 'Mixed Topics');
-}
+function initQuiz(quizId) {
+    var state = quizState[quizId];
+    if (!state) return;
 
-function startTimedQuiz() {
-    const timeLimit = parseInt(document.getElementById('timeLimit').value);
-    QuizState.mode = 'timed';
-    QuizState.timeLimit = timeLimit;
-    
-    const questions = getMixedQuestions(10, 'medium');
-    startQuiz(questions, 'Timed Challenge');
-    startTimer(timeLimit);
-}
+    // Only render once (unless retried)
+    if (state.rendered) return;
 
-function startCircuitQuiz() {
-    QuizState.mode = 'circuit';
-    
-    // Get calculation questions
-    const questions = getCircuitQuestions(8);
-    startQuiz(questions, 'Circuit Analysis');
-}
+    var questions = quizData[quizId];
+    if (!questions || questions.length === 0) return;
 
-function startQuiz(questions, title) {
-    QuizState.questions = questions;
-    QuizState.currentIndex = 0;
-    QuizState.answers = new Array(questions.length).fill(null);
-    QuizState.score = 0;
-    QuizState.startTime = Date.now();
-    QuizState.isComplete = false;
-    
-    // Update UI
-    document.getElementById('quizTitle').textContent = title;
-    document.getElementById('quizTopic').textContent = QuizState.topic ? getTopicName(QuizState.topic) : 'All Topics';
-    document.getElementById('totalQuestions').textContent = questions.length;
-    
-    // Show quiz container, hide mode selection and results
-    document.querySelector('.quiz-mode-selection').classList.add('hidden');
-    document.getElementById('quizContainer').classList.remove('hidden');
-    document.getElementById('quizResults').classList.add('hidden');
-    
-    // Generate navigation dots
-    generateQuizDots(questions.length);
-    
-    // Show first question
-    showQuestion(0);
-    
-    // Show/hide timer
-    if (QuizState.mode === 'timed') {
-        document.getElementById('quizTimer').classList.remove('hidden');
-    } else {
-        document.getElementById('quizTimer').classList.add('hidden');
+    var container = document.getElementById(quizId + '-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Shuffle questions for variety
+    var indices = shuffleIndices(questions.length);
+
+    // Build question cards
+    for (var i = 0; i < indices.length; i++) {
+        var qIdx = indices[i];
+        var qData = questions[qIdx];
+        var qNum = i + 1;
+
+        var card = document.createElement('div');
+        card.className = 'q-card';
+        card.id = quizId + '-q' + i;
+
+        // Question number
+        var numDiv = document.createElement('div');
+        numDiv.className = 'q-num';
+        numDiv.textContent = 'Question ' + qNum + ' of ' + questions.length;
+        card.appendChild(numDiv);
+
+        // Question text
+        var textDiv = document.createElement('div');
+        textDiv.className = 'q-text';
+        textDiv.innerHTML = qData.q;
+        card.appendChild(textDiv);
+
+        // Options
+        var optsDiv = document.createElement('div');
+        optsDiv.className = 'q-options';
+        optsDiv.id = quizId + '-opts' + i;
+
+        for (var j = 0; j < qData.opts.length; j++) {
+            var optBtn = document.createElement('div');
+            optBtn.className = 'q-opt';
+            optBtn.setAttribute('data-quiz', quizId);
+            optBtn.setAttribute('data-qindex', i);
+            optBtn.setAttribute('data-oindex', j);
+            optBtn.setAttribute('data-correct', qData.ans);
+            optBtn.setAttribute('data-original', qIdx);
+
+            // Letter circle
+            var letterSpan = document.createElement('span');
+            letterSpan.className = 'opt-letter';
+            letterSpan.textContent = String.fromCharCode(65 + j); // A, B, C, D
+            optBtn.appendChild(letterSpan);
+
+            // Option text
+            var optText = document.createElement('span');
+            // Remove the leading "A) ", "B) " etc since we have the letter circle
+            var cleanText = qData.opts[j].replace(/^[A-D]\)\s*/, '');
+            optText.textContent = cleanText;
+            optBtn.appendChild(optText);
+
+            optBtn.addEventListener('click', handleQuizAnswer);
+            optsDiv.appendChild(optBtn);
+        }
+
+        card.appendChild(optsDiv);
+
+        // Explanation (hidden initially)
+        var explainDiv = document.createElement('div');
+        explainDiv.className = 'q-explain';
+        explainDiv.id = quizId + '-explain' + i;
+        explainDiv.innerHTML = '💡 ' + qData.explain;
+        card.appendChild(explainDiv);
+
+        container.appendChild(card);
     }
+
+    // Score display (hidden initially)
+    var scoreDiv = document.createElement('div');
+    scoreDiv.className = 'quiz-score';
+    scoreDiv.id = quizId + '-score';
+
+    scoreDiv.innerHTML = '<h3>🎯 Quiz Complete!</h3>' +
+        '<div class="score-num" id="' + quizId + '-score-num">0 / ' + questions.length + '</div>' +
+        '<div class="score-msg" id="' + quizId + '-score-msg"></div>' +
+        '<button class="btn-retry" onclick="retryQuiz(\'' + quizId + '\')">🔄 Try Again</button>';
+
+    container.appendChild(scoreDiv);
+
+    // Store shuffled indices for reference
+    state.indices = indices;
+    state.rendered = true;
+    state.answered = 0;
+    state.correct = 0;
+    state.answers = {};
 }
 
-// ===== QUESTION RETRIEVAL =====
 
-function getQuestionsForTopic(topic, count) {
-    const topicQuestions = QuestionBank[topic] || [];
-    return shuffleArray([...topicQuestions]).slice(0, count);
-}
+/* ═══════════════════════════════════════
+   ANSWER HANDLER
+   ═══════════════════════════════════════ */
 
-function getMixedQuestions(count, difficulty) {
-    let allQuestions = [];
-    
-    Object.keys(QuestionBank).forEach(topic => {
-        QuestionBank[topic].forEach(q => {
-            allQuestions.push({ ...q, topic: topic });
-        });
-    });
-    
-    // Filter by difficulty if specified
-    if (difficulty && difficulty !== 'all') {
-        allQuestions = allQuestions.filter(q => q.difficulty === difficulty);
-    }
-    
-    return shuffleArray(allQuestions).slice(0, count);
-}
+function handleQuizAnswer(e) {
+    var target = e.currentTarget;
+    var quizId = target.getAttribute('data-quiz');
+    var qIndex = parseInt(target.getAttribute('data-qindex'));
+    var oIndex = parseInt(target.getAttribute('data-oindex'));
+    var correctIndex = parseInt(target.getAttribute('data-correct'));
+    var state = quizState[quizId];
 
-function getCircuitQuestions(count) {
-    let calcQuestions = [];
-    
-    Object.keys(QuestionBank).forEach(topic => {
-        QuestionBank[topic].forEach(q => {
-            if (q.type === 'calculation' || q.type === 'fill-blank') {
-                calcQuestions.push({ ...q, topic: topic });
-            }
-        });
-    });
-    
-    return shuffleArray(calcQuestions).slice(0, count);
-}
+    // Check if already answered
+    if (state.answers[qIndex] !== undefined) return;
 
-function shuffleArray(array) {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-}
+    // Record answer
+    state.answers[qIndex] = oIndex;
+    state.answered++;
 
-function getTopicName(topic) {
-    const names = {
-        current: 'Current Electricity',
-        resistance: 'Resistance & Ohm\'s Law',
-        nonohmic: 'Non-Ohmic Conductors',
-        circuits: 'DC Circuits',
-        divider: 'Potential Divider',
-        power: 'Power & Energy',
-        safety: 'Electrical Safety'
-    };
-    return names[topic] || topic;
-}
+    var isCorrect = (oIndex === correctIndex);
+    if (isCorrect) state.correct++;
 
-// ===== DISPLAY QUESTION =====
+    // Get all options for this question
+    var optsContainer = document.getElementById(quizId + '-opts' + qIndex);
+    var allOpts = optsContainer.querySelectorAll('.q-opt');
 
-function showQuestion(index) {
-    QuizState.currentIndex = index;
-    const question = QuizState.questions[index];
-    const questionArea = document.getElementById('questionArea');
-    
-    // Update progress
-    document.getElementById('currentQuestion').textContent = index + 1;
-    const progress = ((index + 1) / QuizState.questions.length) * 100;
-    document.getElementById('quizProgressFill').style.width = progress + '%';
-    
-    // Update navigation dots
-    updateQuizDots();
-    
-    // Generate question HTML
-    let html = `
-        <div class="question-card">
-            <div class="question-header">
-                <div class="question-number">${index + 1}</div>
-                <div class="question-meta">
-                    <span class="question-difficulty ${question.difficulty}">${question.difficulty}</span>
-                    ${question.topic ? `<span class="question-topic-tag">${getTopicName(question.topic)}</span>` : ''}
-                </div>
-            </div>
-            
-            <div class="question-text">${question.question}</div>
-    `;
-    
-    // Add question-specific content
-    switch (question.type) {
-        case 'multiple-choice':
-            html += generateMultipleChoiceHTML(question, index);
-            break;
-        case 'fill-blank':
-            html += generateFillBlankHTML(question, index);
-            break;
-        case 'calculation':
-            html += generateCalculationHTML(question, index);
-            break;
-    }
-    
-    // Add feedback area (hidden initially)
-    html += `<div class="question-feedback hidden" id="feedback-${index}"></div>`;
-    
-    html += '</div>';
-    
-    questionArea.innerHTML = html;
-    
-    // Restore previous answer if exists
-    restoreAnswer(index);
-    
-    // Update navigation buttons
-    updateNavigationButtons();
-}
+    // Mark all options
+    for (var i = 0; i < allOpts.length; i++) {
+        var opt = allOpts[i];
+        var thisIdx = parseInt(opt.getAttribute('data-oindex'));
+        opt.classList.add('chosen');
 
-function generateMultipleChoiceHTML(question, index) {
-    const letters = ['A', 'B', 'C', 'D', 'E'];
-    let html = '<div class="answer-options">';
-    
-    question.options.forEach((option, i) => {
-        const isAnswered = QuizState.answers[index] !== null;
-        const isSelected = QuizState.answers[index] === i;
-        const isCorrect = i === question.correct;
-        
-        let classes = 'answer-option';
-        if (isSelected) classes += ' selected';
-        if (isAnswered && isCorrect) classes += ' correct';
-        if (isAnswered && isSelected && !isCorrect) classes += ' incorrect';
-        if (isAnswered) classes += ' disabled';
-        
-        html += `
-            <div class="${classes}" onclick="selectAnswer(${index}, ${i})" data-option="${i}">
-                <span class="option-letter">${letters[i]}</span>
-                <span class="option-text">${option}</span>
-                <span class="option-indicator">
-                    ${isAnswered && isCorrect ? '✓' : ''}
-                    ${isAnswered && isSelected && !isCorrect ? '✗' : ''}
-                </span>
-            </div>
-        `;
-    });
-    
-    html += '</div>';
-    return html;
-}
-
-function generateFillBlankHTML(question, index) {
-    const answered = QuizState.answers[index] !== null;
-    const userAnswer = QuizState.answers[index];
-    
-    let inputClass = 'fill-blank-input';
-    if (answered) {
-        inputClass += isAnswerCorrect(question, userAnswer) ? ' correct' : ' incorrect';
-    }
-    
-    return `
-        <div class="fill-blank-container">
-            <span>Answer: </span>
-            <input type="number" 
-                   class="${inputClass}" 
-                   id="fill-input-${index}"
-                   value="${userAnswer !== null ? userAnswer : ''}"
-                   ${answered ? 'disabled' : ''}
-                   onchange="submitFillBlank(${index})"
-                   onkeypress="if(event.key==='Enter')submitFillBlank(${index})">
-            <span class="fill-blank-unit">${question.unit || ''}</span>
-        </div>
-    `;
-}
-
-function generateCalculationHTML(question, index) {
-    const answered = QuizState.answers[index] !== null;
-    const userAnswer = QuizState.answers[index];
-    
-    let html = '<div class="calculation-workspace">';
-    
-    // Given values
-    if (question.given) {
-        html += '<div class="calculation-given"><h5>Given:</h5><div class="given-values">';
-        Object.entries(question.given).forEach(([key, value]) => {
-            html += `<div class="given-item"><span class="label">${key} = </span><span class="value">${value}</span></div>`;
-        });
-        html += '</div></div>';
-    }
-    
-    // Answer input
-    let inputClass = 'calc-input-field';
-    if (answered) {
-        inputClass += isAnswerCorrect(question, userAnswer) ? ' correct' : ' incorrect';
-    }
-    
-    html += `
-        <div class="calculation-answer">
-            <label>Find ${question.find}: </label>
-            <input type="number" 
-                   class="${inputClass}"
-                   id="calc-input-${index}"
-                   value="${userAnswer !== null ? userAnswer : ''}"
-                   ${answered ? 'disabled' : ''}
-                   step="0.01"
-                   onchange="submitCalculation(${index})"
-                   onkeypress="if(event.key==='Enter')submitCalculation(${index})">
-            <span class="calc-unit">${question.unit}</span>
-        </div>
-    </div>`;
-    
-    return html;
-}
-
-// ===== ANSWER HANDLING =====
-
-function selectAnswer(questionIndex, optionIndex) {
-    if (QuizState.answers[questionIndex] !== null) return; // Already answered
-    
-    QuizState.answers[questionIndex] = optionIndex;
-    const question = QuizState.questions[questionIndex];
-    const isCorrect = optionIndex === question.correct;
-    
-    // Update UI
-    const options = document.querySelectorAll('.answer-option');
-    options.forEach((opt, i) => {
-        opt.classList.add('disabled');
-        if (i === question.correct) {
+        if (thisIdx === correctIndex) {
             opt.classList.add('correct');
+        } else if (thisIdx === oIndex && !isCorrect) {
+            opt.classList.add('wrong');
         }
-        if (i === optionIndex && !isCorrect) {
-            opt.classList.add('incorrect');
-        }
-        if (i === optionIndex) {
-            opt.classList.add('selected');
-        }
-    });
-    
-    // Show feedback
-    showFeedback(questionIndex, isCorrect, question.explanation);
-    
-    // Update score
-    if (isCorrect) QuizState.score++;
-    
-    // Update dot
-    updateQuizDots();
-    
-    // Auto-advance after delay
-    setTimeout(() => {
-        if (questionIndex < QuizState.questions.length - 1) {
-            // Enable next button highlight
-            document.getElementById('nextQuestionBtn').classList.add('pulse');
+    }
+
+    // Show explanation
+    var explainDiv = document.getElementById(quizId + '-explain' + qIndex);
+    if (explainDiv) {
+        // Add correct/wrong prefix
+        var prefix = isCorrect
+            ? '<span style="color:#66bb6a">✅ Correct!</span> '
+            : '<span style="color:#ef5350">❌ Incorrect.</span> ';
+        explainDiv.innerHTML = prefix + explainDiv.innerHTML;
+        explainDiv.classList.add('show');
+    }
+
+    // Highlight question card border
+    var card = document.getElementById(quizId + '-q' + qIndex);
+    if (card) {
+        card.style.borderLeftWidth = '4px';
+        card.style.borderLeftColor = isCorrect ? '#66bb6a' : '#ef5350';
+    }
+
+    // Scroll explanation into view smoothly
+    if (explainDiv) {
+        setTimeout(function () {
+            explainDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+    }
+
+    // Check if all questions answered
+    var totalQs = quizData[quizId].length;
+    if (state.answered >= totalQs) {
+        showQuizScore(quizId);
+    }
+}
+
+
+/* ═══════════════════════════════════════
+   SCORE DISPLAY
+   ═══════════════════════════════════════ */
+
+function showQuizScore(quizId) {
+    var state = quizState[quizId];
+    var total = quizData[quizId].length;
+    var correct = state.correct;
+    var pct = Math.round((correct / total) * 100);
+
+    var scoreDiv = document.getElementById(quizId + '-score');
+    if (!scoreDiv) return;
+
+    // Update numbers
+    var numDiv = document.getElementById(quizId + '-score-num');
+    if (numDiv) numDiv.textContent = correct + ' / ' + total + '  (' + pct + '%)';
+
+    // Message based on score
+    var msgDiv = document.getElementById(quizId + '-score-msg');
+    if (msgDiv) {
+        var msg = '';
+        var emoji = '';
+        if (pct === 100) {
+            emoji = '🌟';
+            msg = 'Perfect score! Outstanding mastery!';
+        } else if (pct >= 80) {
+            emoji = '🎉';
+            msg = 'Excellent! You have a strong understanding!';
+        } else if (pct >= 60) {
+            emoji = '👍';
+            msg = 'Good effort! Review the explanations for questions you missed.';
+        } else if (pct >= 40) {
+            emoji = '📖';
+            msg = 'Keep studying! Re-read the topic sections and try again.';
         } else {
-            // Last question - show submit button
-            document.getElementById('nextQuestionBtn').classList.add('hidden');
-            document.getElementById('submitQuizBtn').classList.remove('hidden');
+            emoji = '💪';
+            msg = 'Don\'t give up! Go through the topics again carefully, then retry.';
         }
-    }, 1500);
-}
-
-function submitFillBlank(questionIndex) {
-    const input = document.getElementById(`fill-input-${questionIndex}`);
-    const userAnswer = parseFloat(input.value);
-    
-    if (isNaN(userAnswer)) return;
-    
-    QuizState.answers[questionIndex] = userAnswer;
-    const question = QuizState.questions[questionIndex];
-    const isCorrect = isAnswerCorrect(question, userAnswer);
-    
-    // Update UI
-    input.disabled = true;
-    input.classList.add(isCorrect ? 'correct' : 'incorrect');
-    
-    // Show feedback
-    let explanation = question.explanation;
-    if (!isCorrect) {
-        explanation = `The correct answer is ${question.answer}. ` + explanation;
+        msgDiv.innerHTML = emoji + ' ' + msg;
     }
-    showFeedback(questionIndex, isCorrect, explanation);
-    
-    if (isCorrect) QuizState.score++;
-    updateQuizDots();
+
+    // Show score card
+    scoreDiv.classList.add('show');
+
+    // Scroll to score
+    setTimeout(function () {
+        scoreDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
 }
 
-function submitCalculation(questionIndex) {
-    const input = document.getElementById(`calc-input-${questionIndex}`);
-    const userAnswer = parseFloat(input.value);
-    
-    if (isNaN(userAnswer)) return;
-    
-    QuizState.answers[questionIndex] = userAnswer;
-    const question = QuizState.questions[questionIndex];
-    const isCorrect = isAnswerCorrect(question, userAnswer);
-    
-    // Update UI
-    input.disabled = true;
-    input.classList.add(isCorrect ? 'correct' : 'incorrect');
-    
-    // Show feedback
-    let explanation = question.explanation;
-    if (!isCorrect) {
-        explanation = `The correct answer is ${question.answer} ${question.unit}. ` + explanation;
-    }
-    showFeedback(questionIndex, isCorrect, explanation);
-    
-    if (isCorrect) QuizState.score++;
-    updateQuizDots();
-}
 
-function isAnswerCorrect(question, userAnswer) {
-    const tolerance = question.tolerance || 0;
-    return Math.abs(userAnswer - question.answer) <= tolerance;
-}
+/* ═══════════════════════════════════════
+   RETRY QUIZ
+   ═══════════════════════════════════════ */
 
-function showFeedback(questionIndex, isCorrect, explanation) {
-    const feedbackDiv = document.getElementById(`feedback-${questionIndex}`);
-    if (!feedbackDiv) return;
-    
-    feedbackDiv.className = `question-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
-    feedbackDiv.innerHTML = `
-        <div class="feedback-header">
-            <span class="feedback-icon">${isCorrect ? '✅' : '❌'}</span>
-            <span class="feedback-title">${isCorrect ? 'Correct!' : 'Incorrect'}</span>
-        </div>
-        <div class="feedback-explanation">${explanation}</div>
-    `;
-    feedbackDiv.classList.remove('hidden');
-}
-
-function restoreAnswer(index) {
-    const answer = QuizState.answers[index];
-    if (answer === null) return;
-    
-    const question = QuizState.questions[index];
-    
-    // Re-trigger the answer display
-    if (question.type === 'multiple-choice') {
-        // Already handled by generateMultipleChoiceHTML
-    }
-}
-
-// ===== NAVIGATION =====
-
-function generateQuizDots(count) {
-    const dotsContainer = document.getElementById('quizDots');
-    dotsContainer.innerHTML = '';
-    
-    for (let i = 0; i < count; i++) {
-        const dot = document.createElement('div');
-        dot.className = 'quiz-dot';
-        dot.onclick = () => goToQuestion(i);
-        dotsContainer.appendChild(dot);
-    }
-}
-
-function updateQuizDots() {
-    const dots = document.querySelectorAll('.quiz-dot');
-    dots.forEach((dot, i) => {
-        dot.classList.remove('current', 'answered', 'incorrect');
-        
-        if (i === QuizState.currentIndex) {
-            dot.classList.add('current');
-        }
-        
-        if (QuizState.answers[i] !== null) {
-            dot.classList.add('answered');
-            
-            const question = QuizState.questions[i];
-            if (question.type === 'multiple-choice' && QuizState.answers[i] !== question.correct) {
-                dot.classList.add('incorrect');
-            }
-        }
-    });
-}
-
-function updateNavigationButtons() {
-    const prevBtn = document.getElementById('prevQuestionBtn');
-    const nextBtn = document.getElementById('nextQuestionBtn');
-    const submitBtn = document.getElementById('submitQuizBtn');
-    
-    prevBtn.disabled = QuizState.currentIndex === 0;
-    
-    if (QuizState.currentIndex === QuizState.questions.length - 1) {
-        nextBtn.classList.add('hidden');
-        
-        // Show submit only if all questions answered
-        const allAnswered = QuizState.answers.every(a => a !== null);
-        if (allAnswered) {
-            submitBtn.classList.remove('hidden');
-        }
-    } else {
-        nextBtn.classList.remove('hidden');
-        submitBtn.classList.add('hidden');
-    }
-}
-
-function previousQuestion() {
-    if (QuizState.currentIndex > 0) {
-        showQuestion(QuizState.currentIndex - 1);
-    }
-}
-
-function nextQuestion() {
-    document.getElementById('nextQuestionBtn').classList.remove('pulse');
-    
-    if (QuizState.currentIndex < QuizState.questions.length - 1) {
-        showQuestion(QuizState.currentIndex + 1);
-    }
-}
-
-function goToQuestion(index) {
-    showQuestion(index);
-}
-
-// ===== TIMER =====
-
-function startTimer(seconds) {
-    QuizState.timeLimit = seconds;
-    updateTimerDisplay(seconds);
-    
-    QuizState.timerInterval = setInterval(() => {
-        seconds--;
-        updateTimerDisplay(seconds);
-        
-        if (seconds <= 30) {
-            document.getElementById('quizTimer').classList.add('warning');
-        }
-        
-        if (seconds <= 0) {
-            clearInterval(QuizState.timerInterval);
-            submitQuiz();
-        }
-    }, 1000);
-}
-
-function updateTimerDisplay(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    document.getElementById('timerValue').textContent = 
-        `${minutes}:${secs.toString().padStart(2, '0')}`;
-}
-
-function stopTimer() {
-    if (QuizState.timerInterval) {
-        clearInterval(QuizState.timerInterval);
-        QuizState.timerInterval = null;
-    }
-}
-
-// ===== SUBMIT & RESULTS =====
-
-function submitQuiz() {
-    stopTimer();
-    QuizState.isComplete = true;
-    
-    // Calculate final score
-    const totalQuestions = QuizState.questions.length;
-    const correctAnswers = QuizState.score;
-    const percentage = Math.round((correctAnswers / totalQuestions) * 100);
-    
-    // Update stats
-    updateQuizStats(percentage);
-    
-    // Show results
-    showResults(correctAnswers, totalQuestions, percentage);
-}
-
-function showResults(correct, total, percentage) {
-    // Hide quiz container
-    document.getElementById('quizContainer').classList.add('hidden');
-    
-    // Show results
-    const resultsDiv = document.getElementById('quizResults');
-    resultsDiv.classList.remove('hidden');
-    
-    // Update icon and title based on score
-    const resultsIcon = document.getElementById('resultsIcon');
-    const resultsTitle = document.getElementById('resultsTitle');
-    const scoreGrade = document.getElementById('scoreGrade');
-    
-    if (percentage >= 90) {
-        resultsIcon.textContent = '🏆';
-        resultsTitle.textContent = 'Excellent!';
-        scoreGrade.textContent = 'Outstanding performance!';
-        scoreGrade.className = 'score-grade excellent';
-    } else if (percentage >= 70) {
-        resultsIcon.textContent = '🎉';
-        resultsTitle.textContent = 'Well Done!';
-        scoreGrade.textContent = 'Great job!';
-        scoreGrade.className = 'score-grade good';
-    } else if (percentage >= 50) {
-        resultsIcon.textContent = '👍';
-        resultsTitle.textContent = 'Good Effort!';
-        scoreGrade.textContent = 'Keep practicing!';
-        scoreGrade.className = 'score-grade average';
-    } else {
-        resultsIcon.textContent = '📚';
-        resultsTitle.textContent = 'Keep Learning!';
-        scoreGrade.textContent = 'Review the topics and try again!';
-        scoreGrade.className = 'score-grade poor';
-    }
-    
-    // Update score display
-    document.getElementById('scoreValue').textContent = percentage;
-    document.getElementById('correctCount').textContent = correct;
-    document.getElementById('totalCount').textContent = total;
-    
-    // Animate score ring
-    const scoreRing = document.getElementById('scoreRingFill');
-    const circumference = 2 * Math.PI * 45;
-    const offset = circumference - (percentage / 100) * circumference;
-    
-    setTimeout(() => {
-        scoreRing.style.strokeDashoffset = offset;
-        
-        // Change color based on score
-        if (percentage >= 70) {
-            scoreRing.style.stroke = '#10b981';
-        } else if (percentage >= 50) {
-            scoreRing.style.stroke = '#f59e0b';
-        } else {
-            scoreRing.style.stroke = '#ef4444';
-        }
-    }, 100);
-    
-    // Generate topic breakdown
-    generateBreakdown();
-    
-    // Generate answer review
-    generateReview();
-}
-
-function generateBreakdown() {
-    const breakdownDiv = document.getElementById('breakdownBars');
-    breakdownDiv.innerHTML = '';
-    
-    // Group questions by topic
-    const topicResults = {};
-    
-    QuizState.questions.forEach((q, i) => {
-        const topic = q.topic || QuizState.topic || 'general';
-        if (!topicResults[topic]) {
-            topicResults[topic] = { correct: 0, total: 0 };
-        }
-        topicResults[topic].total++;
-        
-        // Check if answer was correct
-        const answer = QuizState.answers[i];
-        if (q.type === 'multiple-choice' && answer === q.correct) {
-            topicResults[topic].correct++;
-        } else if ((q.type === 'fill-blank' || q.type === 'calculation') && 
-                   isAnswerCorrect(q, answer)) {
-            topicResults[topic].correct++;
-        }
-    });
-    
-    // Create breakdown bars
-    Object.entries(topicResults).forEach(([topic, results]) => {
-        const percent = Math.round((results.correct / results.total) * 100);
-        const colorClass = percent >= 70 ? 'good' : percent >= 50 ? 'average' : 'poor';
-        
-        const item = document.createElement('div');
-        item.className = 'breakdown-item';
-        item.innerHTML = `
-            <span class="breakdown-label">${getTopicName(topic)}</span>
-            <div class="breakdown-bar">
-                <div class="breakdown-fill ${colorClass}" style="width: 0%;"></div>
-            </div>
-            <span class="breakdown-percent">${results.correct}/${results.total}</span>
-        `;
-        breakdownDiv.appendChild(item);
-        
-        // Animate bar
-        setTimeout(() => {
-            item.querySelector('.breakdown-fill').style.width = percent + '%';
-        }, 300);
-    });
-}
-
-function generateReview() {
-    const reviewList = document.getElementById('reviewList');
-    reviewList.innerHTML = '';
-    
-    QuizState.questions.forEach((q, i) => {
-        const answer = QuizState.answers[i];
-        let isCorrect = false;
-        let yourAnswer = 'Not answered';
-        let correctAnswer = '';
-        
-        if (q.type === 'multiple-choice') {
-            isCorrect = answer === q.correct;
-            yourAnswer = answer !== null ? q.options[answer] : 'Not answered';
-            correctAnswer = q.options[q.correct];
-        } else {
-            isCorrect = answer !== null && isAnswerCorrect(q, answer);
-            yourAnswer = answer !== null ? answer + ' ' + (q.unit || '') : 'Not answered';
-            correctAnswer = q.answer + ' ' + (q.unit || '');
-        }
-        
-        const item = document.createElement('div');
-        item.className = `review-item ${isCorrect ? 'correct' : 'incorrect'}`;
-        item.innerHTML = `
-            <div class="review-number">${i + 1}</div>
-            <div class="review-content">
-                <div class="review-question">${q.question.substring(0, 100)}${q.question.length > 100 ? '...' : ''}</div>
-                <div class="review-answer">
-                    <span class="your-answer">Your answer: ${yourAnswer}</span>
-                    ${!isCorrect ? `<br><span class="correct-ans">Correct: ${correctAnswer}</span>` : ''}
-                </div>
-            </div>
-        `;
-        reviewList.appendChild(item);
-    });
-}
-
-// ===== QUIZ ACTIONS =====
-
-function retryQuiz() {
-    // Restart with same questions
-    startQuiz(QuizState.questions, document.getElementById('quizTitle').textContent);
-}
-
-function newQuiz() {
-    // Go back to mode selection
-    document.getElementById('quizResults').classList.add('hidden');
-    document.getElementById('quizContainer').classList.add('hidden');
-    document.querySelector('.quiz-mode-selection').classList.remove('hidden');
-    
+function retryQuiz(quizId) {
     // Reset state
-    QuizState.questions = [];
-    QuizState.answers = [];
-    QuizState.score = 0;
-    QuizState.currentIndex = 0;
+    quizState[quizId] = {
+        rendered: false,
+        answered: 0,
+        correct: 0,
+        answers: {}
+    };
+
+    // Clear container
+    var container = document.getElementById(quizId + '-container');
+    if (container) container.innerHTML = '';
+
+    // Re-initialize (reshuffled)
+    initQuiz(quizId);
+
+    // Scroll to top of quiz
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function exitQuiz() {
-    if (confirm('Are you sure you want to exit? Your progress will be lost.')) {
-        stopTimer();
-        newQuiz();
+
+/* ═══════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════ */
+
+// Fisher-Yates shuffle — returns array of shuffled indices
+function shuffleIndices(n) {
+    var arr = [];
+    for (var i = 0; i < n; i++) arr.push(i);
+
+    for (var j = arr.length - 1; j > 0; j--) {
+        var k = Math.floor(Math.random() * (j + 1));
+        var temp = arr[j];
+        arr[j] = arr[k];
+        arr[k] = temp;
     }
+    return arr;
 }
-
-function shareResults() {
-    const percentage = Math.round((QuizState.score / QuizState.questions.length) * 100);
-    const text = `I scored ${percentage}% on the O-Level Electricity Quiz! 🎯⚡ Test your knowledge too!`;
-    
-    if (navigator.share) {
-        navigator.share({
-            title: 'O-Level Electricity Quiz Results',
-            text: text
-        });
-    } else {
-        // Fallback: copy to clipboard
-        navigator.clipboard.writeText(text).then(() => {
-            alert('Results copied to clipboard!');
-        });
-    }
-}
-
-// ===== STATISTICS =====
-
-function updateQuizStats(percentage) {
-    QuizStats.totalQuizzes++;
-    QuizStats.totalCorrect += QuizState.score;
-    QuizStats.totalQuestions += QuizState.questions.length;
-    
-    if (percentage > QuizStats.bestScore) {
-        QuizStats.bestScore = percentage;
-    }
-    
-    if (percentage >= 70) {
-        QuizStats.currentStreak++;
-    } else {
-        QuizStats.currentStreak = 0;
-    }
-    
-    // Update topic scores
-    QuizState.questions.forEach((q, i) => {
-        const topic = q.topic || QuizState.topic || 'current';
-        if (QuizStats.topicScores[topic]) {
-            QuizStats.topicScores[topic].total++;
-            
-            const answer = QuizState.answers[i];
-            if (q.type === 'multiple-choice' && answer === q.correct) {
-                QuizStats.topicScores[topic].correct++;
-            } else if ((q.type === 'fill-blank' || q.type === 'calculation') && 
-                       answer !== null && isAnswerCorrect(q, answer)) {
-                QuizStats.topicScores[topic].correct++;
-            }
-        }
-    });
-    
-    saveQuizStats();
-    updateStatsDisplay();
-}
-
-function updateStatsDisplay() {
-    document.getElementById('totalQuizzesTaken').textContent = QuizStats.totalQuizzes;
-    
-    const avgScore = QuizStats.totalQuestions > 0 
-        ? Math.round((QuizStats.totalCorrect / QuizStats.totalQuestions) * 100) 
-        : 0;
-    document.getElementById('averageScore').textContent = avgScore + '%';
-    document.getElementById('bestScore').textContent = QuizStats.bestScore + '%';
-    document.getElementById('currentStreak').textContent = QuizStats.currentStreak;
-    
-    // Update mastery bars
-    Object.entries(QuizStats.topicScores).forEach(([topic, scores]) => {
-        const percent = scores.total > 0 
-            ? Math.round((scores.correct / scores.total) * 100) 
-            : 0;
-        
-        const fill = document.querySelector(`.mastery-fill[data-topic="${topic}"]`);
-        const percentSpan = fill?.parentElement?.nextElementSibling;
-        
-        if (fill) {
-            fill.style.width = percent + '%';
-        }
-        if (percentSpan) {
-            percentSpan.textContent = percent + '%';
-        }
-    });
-}
-
-function saveQuizStats() {
-    localStorage.setItem('quizStats', JSON.stringify(QuizStats));
-}
-
-function loadQuizStats() {
-    const saved = localStorage.getItem('quizStats');
-    if (saved) {
-        try {
-            QuizStats = JSON.parse(saved);
-        } catch (e) {
-            console.error('Error loading quiz stats:', e);
-        }
-    }
-}
-
-function resetStats() {
-    if (confirm('Are you sure you want to reset all quiz statistics?')) {
-        QuizStats = {
-            totalQuizzes: 0,
-            totalCorrect: 0,
-            totalQuestions: 0,
-            bestScore: 0,
-            currentStreak: 0,
-            topicScores: {
-                current: { correct: 0, total: 0 },
-                resistance: { correct: 0, total: 0 },
-                nonohmic: { correct: 0, total: 0 },
-                circuits: { correct: 0, total: 0 },
-                divider: { correct: 0, total: 0 },
-                power: { correct: 0, total: 0 },
-                safety: { correct: 0, total: 0 }
-            }
-        };
-        saveQuizStats();
-        updateStatsDisplay();
-    }
-}
-
-// ===== EXPORT =====
-window.initQuizSection = initQuizSection;
-window.startTopicQuiz = startTopicQuiz;
-window.startMixedQuiz = startMixedQuiz;
-window.startTimedQuiz = startTimedQuiz;
-window.startCircuitQuiz = startCircuitQuiz;
-window.selectAnswer = selectAnswer;
-window.submitFillBlank = submitFillBlank;
-window.submitCalculation = submitCalculation;
-window.previousQuestion = previousQuestion;
-window.nextQuestion = nextQuestion;
-window.goToQuestion = goToQuestion;
-window.submitQuiz = submitQuiz;
-window.retryQuiz = retryQuiz;
-window.newQuiz = newQuiz;
-window.exitQuiz = exitQuiz;
-window.shareResults = shareResults;
-window.resetStats = resetStats;
-
-console.log('⚡ Quiz system loaded');
